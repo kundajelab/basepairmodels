@@ -401,3 +401,25 @@ def interpret_argsparser():
     parser.add_argument('--reference-genome', '-g', type=str, required=True,
                         help="number of gpus to use", default=1)
     return parser
+
+
+def modisco_argsparser():
+    """ Command line arguments for the run_modisco script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+    
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("-d", "--path_to_imp_scores_dir", type=str, 
+                        help="Path to the importance scores")
+    
+    parser.add_argument("-p", "--profile_or_counts", type=str, 
+                        help="scoring method to use, profile or counts scores")
+    
+    parser.add_argument("-s", "--save_path", type=str, default=None, 
+                        help="Enter a save directory. If not provided, it is "
+                        "saved in the logdir")
+    
+    return parser
