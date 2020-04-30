@@ -1,7 +1,6 @@
-# BPNet
-[![CircleCI](https://circleci.com/gh/kundajelab/bpnet.svg?style=svg&circle-token=f55c1cf580b05df76e260993f7645e35d5302e76)](https://circleci.com/gh/kundajelab/bpnet)
+# BasepairModels
 
-BPNet is a python package with a CLI to train and interpret base-resolution deep neural networks trained on functional genomics data such as ChIP-nexus or ChIP-seq. It addresses the problem of pinpointing the regulatory elements in the genome:
+BasepairModels is a python package with a CLI & API to train and interpret base-resolution deep neural networks trained on functional genomics data such as ChIP-nexus or ChIP-seq. It addresses the problem of pinpointing the regulatory elements in the genome:
 
 <img src="./docs/theme_dir/bpnet/dna-words.png" alt="BPNet" style="width: 600px;"/>
 
