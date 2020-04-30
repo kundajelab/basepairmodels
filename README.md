@@ -11,7 +11,7 @@ Specifically, it aims to answer the following questions:
 
 For more information, see the BPNet manuscript:
 
-*Deep learning at base-resolution reveals motif syntax of the cis-regulatory code* (http://dx.doi.org/10.1101/737981.)
+*Deep learning at base-resolution reveals motif syntax of the cis-regulatory code* (http://dx.doi.org/10.1101/737981)
 
 ## Overview
 
