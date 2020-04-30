@@ -410,7 +410,7 @@ class MTBPNetBatchGenerator(MTBatchGenerator):
                     coordinate
                 
             Returns:
-                tupleL A batch tuple with one hot encoded sequences 
+                tuple: A batch tuple with one hot encoded sequences 
                 and corresponding outputs 
         """
         
