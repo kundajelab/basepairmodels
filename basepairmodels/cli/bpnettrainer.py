@@ -10,7 +10,7 @@ from keras.optimizers import Adam
 sys.stderr = stderr
 
 from batchgenutils import *
-from utils import *
+from bpnetutils import *
 from callbacks import BatchController, TimeHistory
 from losses import MultichannelMultinomialNLL
 

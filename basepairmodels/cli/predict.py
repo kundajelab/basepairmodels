@@ -11,7 +11,7 @@ import bigwigutils
 import MTBatchGenerator
 
 from batchgenutils import *
-from utils import *
+from bpnetutils import *
 from losses import MultichannelMultinomialNLL, multinomial_nll
 
 from keras.models import load_model

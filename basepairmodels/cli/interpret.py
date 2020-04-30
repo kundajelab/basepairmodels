@@ -19,7 +19,7 @@ import shap
 from batchgenutils import *
 from scipy.ndimage import gaussian_filter1d
 from shaputils import *
-from utils import *
+from bpnetutils import *
 
 from losses import MultichannelMultinomialNLL
 
