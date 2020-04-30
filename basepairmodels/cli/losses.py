@@ -16,6 +16,12 @@ def multinomial_nll(true_counts, logits):
 
 #from https://github.com/kundajelab/basepair/blob/cda0875571066343cdf90aed031f7c51714d991a/basepair/losses.py#L87
 class MultichannelMultinomialNLL(object):
+    """ Class to compute combined loss from 'n' tasks
+    
+        Args:
+            n (int): the number of channels / tasks 
+    """
+    
     def __init__(self, n):
         self.__name__ = "MultichannelMultinomialNLL"
         self.n = n
