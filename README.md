@@ -2,7 +2,7 @@
 
 BasepairModels is a python package with a CLI & API to train and interpret base-resolution deep neural networks trained on functional genomics data such as ChIP-nexus or ChIP-seq. It addresses the problem of pinpointing the regulatory elements in the genome:
 
-<img src="./docs/tutorial/bpnet/images/dna-words.png" alt="BPNet" />
+<img src="./docs-build/tutorial/bpnet/images/dna-words.png" alt="BPNet" />
 
 Specifically, it aims to answer the following questions:
 - What are the sequence motifs?
@@ -15,7 +15,7 @@ For more information, see the BPNet manuscript:
 
 ## Overview
 
-<img src="./docs/tutorial/bpnet/images/overview.png" alt="BPNet"/>
+<img src="./docs-build/tutorial/bpnet/images/overview.png" alt="BPNet"/>
 
 
 ## Installation
@@ -52,7 +52,7 @@ For this tutorial we'll use experimental CHIP-seq data, for the transcription fa
 
 Download the .bam files for the two replicates shown below in the image.
 
-<img src="./docs/tutorial/bpnet/images/tutorial-data.png" alt="replicate bams"/>
+<img src="./docs-build/tutorial/bpnet/images/tutorial-data.png" alt="replicate bams"/>
 
 The two replicates are isogenic replicates (biological). A more detailed explanation 
 of the various types of replicates can be found <a href="https://www.encodeproject.org/data-standards/terms/">here</a>.
@@ -72,7 +72,7 @@ Now download the control for the experiment, which is available here <a href="ht
 
 Download the bam file shown in the image below.
 
-<img src="./docs/tutorial/bpnet/images/tutorial-control.png" alt="control bam"/>
+<img src="./docs-build/tutorial/bpnet/images/tutorial-control.png" alt="control bam"/>
 
 Link provided below
 
@@ -145,7 +145,7 @@ future support for more formats will be added.
 
 See image below that shows the file listed in the ENCODE data portal
 
-<img src="./docs/tutorial/bpnet/images/tutorial-idrpeaks.png">
+<img src="./docs-build/tutorial/bpnet/images/tutorial-idrpeaks.png">
 
 Link to download the file 
 <a href="https://www.encodeproject.org/files/ENCFF396BZQ/@@download/ENCFF396BZQ.bed.gz">ENCFF396BZQ</a>
@@ -163,13 +163,13 @@ mv peaks.bed ENCSR000EGM/data
 
 Once this is done, your directory heirarchy should resemble this
 
-<div align="left"><img src="./docs/tutorial/bpnet/images/directory-data.png"></div>
+<div align="left"><img src="./docs-build/tutorial/bpnet/images/directory-data.png"></div>
 
 #### 1.4 Reference genome
 
 For the sake of this tutorial let's assume we have a `reference` directory at the same level as the `ENCSR000EGM` experiment directory. In the `reference` directory we will place 4 files the hg38 fasta file, the index to the fasta file, chromosome sizes file and one text file that contains a list of chromosomes we care about (one per line - chr1-22, X, Y, M and exclude the rest). The directory structure looks like this.
 
-<div align="left"><img src="./docs/tutorial/bpnet/images/directory-reference.png"></img>
+<div align="left"><img src="./docs-build/tutorial/bpnet/images/directory-reference.png"></img>
 </div>
 
 ### 2. Train a model!
