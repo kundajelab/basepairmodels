@@ -27,27 +27,10 @@ def training_argsparser():
                         help="minimum change in the validation loss to "
                         "qualify as an improvement", default=1e-3)
 
-    parser.add_argument('--reduce_lr_on_plateau-patience', type=int, 
+    parser.add_argument('--reduce-lr-on-plateau-patience', type=int, 
                         help="patience value for ReduceLROnPlateau callback", 
                         default=2)
-
-    # training modes
-    parser.add_argument('--train-peaks', action='store_true', 
-                        help="train on peaks contained in the peaks.bed files")
     
-    parser.add_argument('--train-intervals', nargs='+', type=int,
-                        help="train on positions at equal intervals, "
-                        "specify two values <num_positions> <step>. If "
-                        "num_positions is -1 then positions across the "
-                        "entire chromosome are used (superceded by "
-                        "--train-peaks)", default=[-1, 200])
-
-    parser.add_argument('--train-random', type=int, 
-                        help="train on randomly sampled positions on the "
-                        "chromosomes. Specify an int value <num_positions>. "
-                        "num_positions has to be a positive number.", 
-                        default = 10000)
-
     # model params
     # TODO - might want to yaml just the model params 
     # the arguments here are specific to BPNet
@@ -65,6 +48,8 @@ def training_argsparser():
                         help="Weight for counts mse loss",
                         default=100.0)
     
+    parser.add_argument('--control-smoothing', default=[[7.5, 80]])
+    
     # parallelization params
     parser.add_argument('--threads', '-t', type=int,
                         help="number of parallel threads for batch "
@@ -80,11 +65,15 @@ def training_argsparser():
     parser.add_argument('--chrom-sizes', '-c', type=str, required=True,
                         help="path to chromosome sizes file")
     
+    parser.add_argument('--chroms', nargs='+', required=True,
+                        help="master list of chromosomes for the genome")
+    
+    parser.add_argument('--exclude-chroms', nargs='+', help="list of "
+                        "chromosomes to be excluded", default=[])    
+
     # validation params
     parser.add_argument('--splits', '-s', type=str,
-                        help="string name of the function from 'experiments' "
-                        "that returns the validation and test splits to use", 
-                        default='10_human_val_test_splits')
+                        help="path to json file")
 
     # output params    
     parser.add_argument('--output-dir', '-d', type=str,
@@ -105,14 +94,10 @@ def training_argsparser():
                         help="specify if the model output directory "
                         "and filename should be auto generated")
 
-    parser.add_argument('--other-tags', nargs='+',
-                        help="list of additional tags to be added as "
-                        "suffix to the filenames", default=[])
-        
     parser.add_argument('--model-output-filename', type=str,
                         help="basename of the model file without the .h5 "
                         "extension (required if --automate-filenames is "
-                        "not used)")
+                        "not used)", default="")
 
     # batch gen parameters
     parser.add_argument('--input-seq-len', type=int, 
@@ -136,7 +121,7 @@ def training_argsparser():
                         "positive peak", default=0.0)
         
     # input data params
-    parser.add_argument('--input-dir', '-i', type=str,
+    parser.add_argument('--input-data', '-i', type=str,
                         help="input directory containing bigWigs and peaks", 
                         default=".")
     
@@ -147,11 +132,12 @@ def training_argsparser():
     parser.add_argument('--has-control', action='store_true', 
                         help="specify if the input data has controls")
 
-    parser.add_argument('--chroms', nargs='+', required=True,
-                        help="master list of chromosomes for the genome")
     
-    parser.add_argument('--exclude-chroms', nargs='+', help="list of "
-                        "chromosomes to be excluded", default=[])    
+    parser.add_argument('--sampling-mode', type=str, 
+                        choices=['peaks', 'sequential', 'random'], 
+                        default='peaks')
+    
+    parser.add_argument('--shuffle', action='store_true')
     
     return parser
 

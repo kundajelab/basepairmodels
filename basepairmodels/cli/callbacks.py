@@ -7,17 +7,17 @@ class BatchController(Callback):
        
     """
     
-    def __init__(self, mtbatchgenerator):
+    def __init__(self, batchgenerator):
         # call base class constructor
         super(BatchController, self).__init__()
         
         # pointer to the batch generator
-        self.mtbatchgenerator = mtbatchgenerator
+        self.batchgenerator = batchgenerator
     
     
     def on_epoch_begin(self, epoch, logs={}):
         # set ready flag in the batch generator to True
-        self.mtbatchgenerator.set_ready_for_next_epoch(True)
+        self.batchgenerator.set_ready_for_next_epoch()
 
         
 class TimeHistory(Callback):
