@@ -11,7 +11,7 @@ setup(
     author="Zahoor Zafrulla",
     author_email="zahoor@stanford.edu",
     url="https://github.com/kundajelab/basepairmodels",
-    packages=find_packages(),
+    packages=["basepairmodels"],
     install_requires=["tensorflow-gpu==1.14", "tensorflow-probability==0.7", 
                       "keras==2.2.4", "scikit-learn", 
                       "scipy", "scikit-image", "scikit-learn", "deepdish", 
@@ -27,5 +27,10 @@ setup(
               "genomics"],
     test_suite="tests",
     include_package_data=True,
-    tests_require=["pytest", "pytest-cov"]
+    tests_require=["pytest", "pytest-cov"],
+    entry_points = {
+        "console_scripts": [
+            "train = basepairmodels.cli.bpnettrainer:main",
+        ]
+    }
 )
