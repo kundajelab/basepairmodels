@@ -1,8 +1,9 @@
 from basepairmodels.api.profilemodel import ProfileModel
 
 class BPNet(ProfileModel):
+    
 
-    def __init__(self, input_seq_len=1346, output_len=100, num_tasks=2, 
+    def __init__(self, input_seq_len=1346, output_len=1000, num_tasks=2, 
                  num_bias_profiles=2, filters=64, num_dilation_layers=6, 
                  conv1_kernel_size=21, dilation_kernel_size=3, 
                  profile_kernel_size=25, counts_loss_weight=10):
