@@ -28,19 +28,20 @@ class ProfileModel:
     def _set_parallelization_params(self, parallelization_params):
         self.parallelization_params = parallelization_params
     
-    def _set_network_params(self, network_params):
-        self.network_params = network_params
+    def _set_params(self, network_params):
+        self.params = network_params
         
-    def set_params(self, params_json):
-        with open(params_json, 'r') as params:
-            self.params = json.loads(params.read())
-        self._set_input_params(self.params['input_params'])
-        self._set_output_params(self.params['output_params'])
-        self._set_genome_params(self.params['genome_params'])
-        self._set_batch_gen_params(self.params['batch_gen_params'])
-        self._set_hyper_params(self.params['hyper_params'])
-        self._set_parallelization_params(self.params['parallelization_params'])
-        self._set_network_params(self.params['network_params'])
+    def set_config(self, config_json):
+        with open(config_json, 'r') as config:
+            self.config = json.loads(config.read())
+
+        self._set_input_params(self.config['input_params'])
+        self._set_output_params(self.config['output_params'])
+        self._set_genome_params(self.config['genome_params'])
+        self._set_batch_gen_params(self.config['batch_gen_params'])
+        self._set_hyper_params(self.config['hyper_params'])
+        self._set_parallelization_params(self.config['parallelization_params'])
+        self._set_params(self.config['network_params'])
 
         
         
@@ -51,7 +52,7 @@ class ProfileModel:
         self.model = training.train_and_validate(
             self.input_params, self.output_params, self.genome_params,
             self.batch_gen_params, self.hyper_params, 
-            self.parallelization_params, self.network_params, train_chroms, 
+            self.parallelization_params, self.params, train_chroms, 
             val_chroms, model_dir=model_dir, suffix_tag=suffix_tag)
         
 
