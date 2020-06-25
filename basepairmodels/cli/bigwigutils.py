@@ -83,7 +83,7 @@ def prepare_BPNet_output_files(tasks, output_dir, chroms, chrom_sizes,
     chroms.sort()
     for chrom in chroms:
         size = chrom_sizes_df.at[chrom, 'size']
-        header.append((chrom, size))
+        header.append((chrom, int(size)))
 
     logging.debug("bigWig HEADER - {}".format(header))
     

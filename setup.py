@@ -31,6 +31,7 @@ setup(
     entry_points = {
         "console_scripts": [
             "train = basepairmodels.cli.bpnettrainer:main",
+            "predict = basepairmodels.cli.predict:predict_main"
         ]
     }
 )

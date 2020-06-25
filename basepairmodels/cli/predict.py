@@ -1,4 +1,4 @@
-import argparsers
+from basepairmodels.cli import argparsers
 import time
 import datetime
 import json
@@ -6,13 +6,13 @@ import os
 import pandas as pd
 import sys
 
-import logger
-import bigwigutils
-import MTBatchGenerator
+from basepairmodels.cli import logger
+from basepairmodels.cli import bigwigutils
+from basepairmodels.cli import MTBatchGenerator
 
-from batchgenutils import *
-from bpnetutils import *
-from losses import MultichannelMultinomialNLL, multinomial_nll
+from basepairmodels.cli.batchgenutils import *
+from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 
 from keras.models import load_model
 from keras.utils import CustomObjectScope
