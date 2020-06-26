@@ -238,8 +238,34 @@ python predict.py \
 
 ### 4. Compute metrics
 
+```
+METRICS_DIR=$BASE_DIR/metrics
+python metrics.py \
+   -A [path to training bigwig] \
+   -B [path to predictions bigwig] \
+   --peaks $DATA_DIR/peaks.bed \
+   --chroms chr1 \
+   --output-dir $METRICS_DIR \
+   --chrom-sizes $CHROM_SIZES
+```
+
 ### 5. Compute importance scores
+
+```
+INTERPRET_DIR=$BASE_DIR/interpretations
+python interpret.py \
+    --reference-genome $REFERENCE_GENOME \
+    --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
+    --bed-file $DATA_DIR/peaks.bed \
+    --output-dir $INTERPRET_DIR \
+```
 
 ### 6. Discover motifs with TF-modisco
 
-
+```
+MODISCO_DIR=$BASE_DIR/modisco
+python run_modisco.py 
+    -d $INTERPRET_DIR/[TIME STAMP] \
+    -p profile \
+    -save $MODISCO_DIR
+```
