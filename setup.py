@@ -15,7 +15,7 @@ setup(
     install_requires=["tensorflow-gpu==1.14", "tensorflow-probability==0.7", 
                       "keras==2.2.4", "scikit-learn", 
                       "scipy", "scikit-image", "scikit-learn", "deepdish", 
-                      "h5py", "numpy", "pandas", "matplotlib", "plotly", 
+                      "h5py", "numpy==1.16.4", "pandas", "matplotlib", "plotly", 
                       "deeptools", "pyfaidx", "modisco", "deeplift", "tqdm",
                       "shap @ git+https://github.com/AvantiShri/shap.git", 
                       "mseqgen @ git+https://github.com/kundajelab/mseqgen.git"],
