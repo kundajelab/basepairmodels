@@ -229,8 +229,6 @@ def train_and_validate(input_params, output_params, genome_params,
                     loss=[MultichannelMultinomialNLL(
                         train_gen.num_tasks), 'mse'], 
                     loss_weights=[1, network_params['counts_loss_weight']])
-
-    model.summary()
     
     # begin time for training
     t1 = time.time()
