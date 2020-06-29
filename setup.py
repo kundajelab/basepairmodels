@@ -11,7 +11,7 @@ setup(
     author="Zahoor Zafrulla",
     author_email="zahoor@stanford.edu",
     url="https://github.com/kundajelab/basepairmodels",
-    packages=["basepairmodels"],
+    packages=find_packages(exclude=["docs", "docs-build"]),
     install_requires=["tensorflow-gpu==1.14", "tensorflow-probability==0.7", 
                       "keras==2.2.4", "scikit-learn", 
                       "scipy", "scikit-image", "scikit-learn", "deepdish", 
