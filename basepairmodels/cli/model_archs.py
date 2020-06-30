@@ -1,5 +1,10 @@
+import sys
+stderr = sys.stderr
+sys.stderr = open('keras.stderr', 'w')
 from keras import layers, models
 from keras.backend import int_shape
+sys.stderr = stderr
+''
 def DilateSumNet():
     inputs = layers.Input(shape=(1024,4))  # Returns a placeholder tensor
     x = layers.Conv1D(filters=32, kernel_size=7,activation=tf.nn.relu, padding='valid',  kernel_initializer='he_normal')(inputs)

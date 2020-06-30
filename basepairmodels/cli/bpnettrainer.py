@@ -37,7 +37,10 @@ import multiprocessing as mp
 import os
 import sys
 
+stderr = sys.stderr
+sys.stderr = open('keras.stderr', 'w')
 from basepairmodels.common import model_archs, training
+sys.stderr = stderr
 from mseqgen import quietexception
 
 

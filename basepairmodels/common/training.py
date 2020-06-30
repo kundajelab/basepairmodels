@@ -46,6 +46,7 @@ sys.stderr = open('keras.stderr', 'w')
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.utils import multi_gpu_model
 from keras.optimizers import Adam
+from basepairmodels.common import model_archs
 sys.stderr = stderr
 
 from basepairmodels.cli.batchgenutils import *
@@ -54,7 +55,6 @@ from basepairmodels.cli.callbacks import BatchController, TimeHistory
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli import experiments
 from basepairmodels.cli import logger
-from basepairmodels.common import model_archs
 from mseqgen import generators 
 
 import copy
