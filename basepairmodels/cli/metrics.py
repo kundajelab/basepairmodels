@@ -1,10 +1,10 @@
-import argparsers
-import logger
 import tensorflow as tf
 
-from batchgenutils import *
-from losses import multinomial_nll
-from utils import *
+from basepairmodels.cli.argparsers import metrics_argsparser
+from basepairmodels.cli.batchgenutils import *
+from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.logger import *
+from basepairmodels.cli.losses import multinomial_nll
 
 import json
 import numpy as np
@@ -19,7 +19,7 @@ from scipy.special import logsumexp
 
 def metrics_main():
     # parse the command line arguments
-    parser = argparsers.metrics_argsparser()
+    parser = metrics_argsparser()
     args = parser.parse_args()
 
     # check if the output directory exists
@@ -45,9 +45,8 @@ def metrics_main():
     logfname = "{}/metrics.log".format(metrics_dir)
     
     # set up the loggers
-    logger.init_logger(logfname)
-    
-    
+    init_logger(logfname)
+
     if args.peaks is not None:
         peaks_df = pd.read_csv(args.peaks, 
                                sep='\t', header=None, 
@@ -253,7 +252,7 @@ def metrics_main():
 
     counts_pearson = pearsonr(countsA, countsB)[0]
     
-    print("|-|", metrics_dir.split('/')[-2], np.median(pearson), np.median(spearman), np.median(jsd), np.median(mse), counts_pearson)
+    print("\t\t", "median", "\t\t", "max", "\t\t", "min")
     print("pearson", np.median(pearson), max(pearson), min(pearson)) 
     print("spearman", np.median(spearman), max(spearman), min(spearman))
     print("jsd", np.median(jsd), max(jsd), min(jsd))
@@ -273,6 +272,5 @@ def metrics_main():
         json.dump(vars(args), fp)
     
 if __name__ == '__main__':
-    tf.enable_eager_execution()
     metrics_main()
 
