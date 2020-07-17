@@ -101,7 +101,7 @@ def training_argsparser():
 
     # batch gen parameters
     parser.add_argument('--input-seq-len', type=int, 
-                        help="length of input DNA sequence", default=1346)
+                        help="length of input DNA sequence", default=3088)
 
     parser.add_argument('--output-len', type=int, 
                         help="length of output profile", default=1000)
@@ -156,7 +156,7 @@ def predict_argsparser():
                         default=64)
         
     parser.add_argument('--input-seq-len', type=int, 
-                        help="length of input DNA sequence", default=1346)
+                        help="length of input DNA sequence", default=3088)
 
     parser.add_argument('--output-len', type=int, 
                         help="length of output profile", default=1000)
@@ -327,7 +327,7 @@ def interpret_argsparser():
     # input params
     parser.add_argument('--input-seq-len', '-l', type=int, 
                         help="the length of the input sequence to the model", 
-                        default=1346)
+                        default=3088)
     
     parser.add_argument('--control-len', type=int, 
                         help="the length of the control input to the model", 

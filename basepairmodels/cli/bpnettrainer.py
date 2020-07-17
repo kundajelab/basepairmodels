@@ -138,7 +138,7 @@ def main():
                 network_params['name']))
     
     if not os.path.isfile(args.splits):
-        raise quietexception.QuietException("File not found: {}", input_data)
+        raise quietexception.QuietException("File not found: {}", args.splits)
                 
     # load splits from json file
     with open(args.splits, "r") as splits_json:

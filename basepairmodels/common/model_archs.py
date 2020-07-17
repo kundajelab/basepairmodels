@@ -20,7 +20,7 @@ from keras import layers, models
 from keras.backend import int_shape
 
 def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64, 
-                num_dilation_layers=6, conv1_kernel_size=21, 
+                num_dilation_layers=9, conv1_kernel_size=21, 
                 dilation_kernel_size=3, profile_kernel_size=25, num_tasks=2):
     
     """
@@ -76,18 +76,17 @@ def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64,
     # each layer receives the sum of feature maps 
     # from all previous layers
     # *** on a quest to have meaninful layer names *** 
-    res_layers = [(first_conv, '1stconv')] 
+    res_layers = [(first_conv, '1st_conv')] 
                                            
-    layer_names = ['2nd', '3rd', '4th', '5th', '6th', '7th']
     for i in range(1, num_dilation_layers + 1):
         if i == 1:
             res_layers_sum = first_conv
         else:
             res_layers_sum = layers.add([l for l, _ in res_layers],
-                                        name='add_{}'.format(i))
+                                        name='add_{}'.format(i-1))
 
         # dilated convolution
-        conv_layer_name = '{}conv'.format(layer_names[i - 1])
+        conv_layer_name = 'dil_conv_{}'.format(i)
         conv_output = layers.Conv1D(filters, kernel_size=dilation_kernel_size, 
                                     padding='valid',
                                     activation='relu', dilation_rate=2**i,
@@ -100,7 +99,7 @@ def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64,
         for lyr, name in res_layers:
             lyr_shape = int_shape(lyr)
             cropsize = lyr_shape[1] //2 - conv_output_shape[1] // 2
-            lyr_name = '{}-crop_{}th_dconv'.format(name.split('-')[0], i)
+            lyr_name = 'crop_{}'.format(name.split('-')[0])
             cropped_layers.append(
                 (layers.Cropping1D(cropsize, name=lyr_name)(lyr), lyr_name))
         
@@ -162,7 +161,7 @@ def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64,
     return model
 
 def BPNet(input_seq_len, output_len, num_bias_profiles, filters=64, 
-          num_dilation_layers=6, conv1_kernel_size=21, dilation_kernel_size=3, 
+          num_dilation_layers=9, conv1_kernel_size=21, dilation_kernel_size=3, 
           profile_kernel_size=25, num_tasks=2):
     
     """
@@ -218,18 +217,17 @@ def BPNet(input_seq_len, output_len, num_bias_profiles, filters=64,
     # each layer receives the sum of feature maps 
     # from previous two layers
     # *** on a quest to have meaninful layer names *** 
-    res_layers = [(first_conv, '1stconv')] 
+    res_layers = [(first_conv, '1st_conv')] 
                                            
-    layer_names = ['2nd', '3rd', '4th', '5th', '6th', '7th']
     for i in range(1, num_dilation_layers + 1):
         if i == 1:
             res_layers_sum = first_conv
         else:
             res_layers_sum = layers.add([l for l, _ in res_layers],
-                                        name='add_{}'.format(i))
+                                        name='add_{}'.format(i-1))
 
         # dilated convolution
-        conv_layer_name = '{}conv'.format(layer_names[i - 1])
+        conv_layer_name = 'dil_conv_{}'.format(i)
         conv_output = layers.Conv1D(filters, kernel_size=dilation_kernel_size, 
                                     padding='valid', activation='relu', 
                                     dilation_rate=2**i, 
@@ -243,7 +241,7 @@ def BPNet(input_seq_len, output_len, num_bias_profiles, filters=64,
         lyr, name = res_layers[-1]
         lyr_shape = int_shape(lyr)
         cropsize = lyr_shape[1] // 2 - conv_output_shape[1] // 2
-        lyr_name = '{}-crop_{}th_dconv'.format(name.split('-')[0], i)
+        lyr_name = 'crop_{}'.format(name.split('-')[0])
         cropped_layers.append(
             (layers.Cropping1D(cropsize, name=lyr_name)(lyr), lyr_name)) 
         

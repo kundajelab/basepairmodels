@@ -3,7 +3,7 @@ from basepairmodels.common import training
 
 class ProfileModel:
     
-    def __init__(self, input_seq_len=1346, output_len=1000, num_tasks=2):
+    def __init__(self, input_seq_len=3088, output_len=1000, num_tasks=2):
         self.input_seq_len = input_seq_len
         self.output_len = output_len
         self.num_tasks = num_tasks

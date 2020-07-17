@@ -217,6 +217,8 @@ def train_and_validate(input_params, output_params, genome_params,
                       len(input_params['control_smoothing']) + 1,
                       filters=network_params['filters'], 
                       num_tasks=train_gen.num_tasks)
+    
+    model.summary()
 
     # if running in multi gpu mode
     if parallelization_params['gpus'] > 1:

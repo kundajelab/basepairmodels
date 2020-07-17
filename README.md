@@ -36,9 +36,7 @@ conda activate basepairmodels
 ### 3. Install basepairmodels
 
 ```
-git clone https://github.com/kundajelab/basepairmodels.git
-cd basepairmodels
-pip install .
+pip install git+https://github.com/kundajelab/basepairmodels.git
 ```
 
 
@@ -191,16 +189,17 @@ MODEL_DIR=$BASE_DIR/models
 REFERENCE_DIR=~/reference
 CHROM_SIZES=$REFERENCE_DIR/hg38.chrom.sizes
 REFERENCE_GENOME=$REFERENCE_DIR/hg38.genome.fa
+CV_SPLITS=$BASE_DIR/splits.json
 
 python bpnettrainer.py \
     --output-dir $MODEL_DIR \
     --splits 1_human_val_test_split \
-    --input-dir $DATA_DIR \
+    --input-data $DATA_DIR \
     --chrom-sizes $CHROM_SIZES \
     --reference-genome $REFERENCE_GENOME \
     --threads 10 \
     --epochs 100 \
-    --train-peaks \
+    --sampling-mode peaks \
     --chroms $(cat ${REFERENCE_DIR}/hg38_chroms.txt) \
     --has-control \
     --stranded \
