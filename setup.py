@@ -33,7 +33,8 @@ setup(
         "console_scripts": [
             "train = basepairmodels.cli.bpnettrainer:main",
             "predict = basepairmodels.cli.predict:predict_main",
-            "metrics = basepairmodels.cli.metrics:metrics_main"
+            "metrics = basepairmodels.cli.metrics:metrics_main",
+            "interpret = basepairmodels.cli.interpret:interpret_main"
         ]
     }
 )

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pyBigWig
 import pysam
-
+import shap
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -12,16 +12,14 @@ import tensorflow_probability as tfp
 from keras.models import load_model
 from keras.utils import CustomObjectScope
 
-import argparsers
-import logger
-import shap
+from basepairmodels.cli.argparsers import interpret_argsparser
+from basepairmodels.cli.batchgenutils import *
+from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.shaputils import *
+from basepairmodels.cli.logger import *
+from basepairmodels.cli.losses import MultichannelMultinomialNLL
 
-from batchgenutils import *
 from scipy.ndimage import gaussian_filter1d
-from shaputils import *
-from bpnetutils import *
-
-from losses import MultichannelMultinomialNLL
 
 def interpret(args, interpret_dir):
     # load the model
@@ -187,7 +185,7 @@ def interpret(args, interpret_dir):
         
 def interpret_main():
     # parse the command line arguments
-    parser = argparsers.interpret_argsparser()
+    parser = interpret_argsparser()
     args = parser.parse_args()
 
     # check if the output directory exists
@@ -206,7 +204,7 @@ def interpret_main():
     logfname = "{}/interpret.log".format(interpret_dir)
     
     # set up the loggers
-    logger.init_logger(logfname)
+    init_logger(logfname)
     
     # interpret
     logging.info("Loading {}".format(args.model))

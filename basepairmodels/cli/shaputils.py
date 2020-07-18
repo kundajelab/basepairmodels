@@ -66,7 +66,7 @@ def get_weightedsum_meannormed_logits(model, task_id, stranded):
         start_idx = task_id
         end_idx = task_id + 1
     
-    meannormed_logits = 
+    meannormed_logits = \
         (model.outputs[0][:, :, start_idx:end_idx] - \
          tf.reduce_mean(
             model.outputs[0][:, :, start_idx:end_idx], axis=1)[:, None, :])
