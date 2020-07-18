@@ -224,7 +224,7 @@ Once the training is complete we can generate prediction on the test chromosome.
 ```
 PREDICTIONS_DIR=$BASE_DIR/predictions
 mkdir $PREDICTIONS_DIR
-python predict.py \
+predict \
     --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
     --chrom-sizes $CHROM_SIZES \
     --chroms chr1 \
@@ -246,7 +246,8 @@ python predict.py \
 
 ```
 METRICS_DIR=$BASE_DIR/metrics
-python metrics.py \
+mkdir $METRICS_DIR
+metrics \
    -A [path to training bigwig] \
    -B [path to predictions bigwig] \
    --peaks $DATA_DIR/peaks.bed \
@@ -259,19 +260,29 @@ python metrics.py \
 
 ```
 INTERPRET_DIR=$BASE_DIR/interpretations
-python interpret.py \
+mkdir $INTERPRET_DIR
+interpret \
     --reference-genome $REFERENCE_GENOME \
     --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
     --bed-file $DATA_DIR/peaks.bed \
+    --chroms chr1 \
     --output-dir $INTERPRET_DIR \
 ```
 
 ### 6. Discover motifs with TF-modisco
 
 ```
-MODISCO_DIR=$BASE_DIR/modisco
-python run_modisco.py 
+MODISCO_PROFILE_DIR=$BASE_DIR/modisco_profile
+mkdir $MODISCO_PROFILE_DIR
+modisco \
     -d $INTERPRET_DIR/[TIME STAMP] \
     -p profile \
-    -save $MODISCO_DIR
+    -save $MODISCO_PROFILE_DIR
+
+MODISCO_COUNTS_DIR=$BASE_DIR/modisco_counts
+mkdir $MODISCO_COUNTS_DIR
+modisco \ 
+    -d $INTERPRET_DIR/[TIME STAMP] \
+    -p counts \
+    -save $MODISCO_COUNTS_DIR
 ```
