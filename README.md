@@ -36,7 +36,7 @@ conda activate basepairmodels
 ### 3. Install basepairmodels
 
 ```
-pip install git+https://github.com/kundajelab/basepairmodels.git
+pip install --no-cache-dir --ignore-installed git+https://github.com/kundajelab/basepairmodels.git
 ```
 
 
