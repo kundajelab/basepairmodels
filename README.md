@@ -174,11 +174,7 @@ For the sake of this tutorial let's assume we have a `reference` directory at th
 
 Now that we have our data prepped, we can now train our first model!!
 
-The script to train a model is called `bpnettrainer`. Before we run the script let's create a new directory called `models` under the experiment directory to store model files from the training process. 
-
-```
-mkdir ENCSR000EGM/models
-```
+The command to train a model is called `train`. 
 
 You can kick start the training process by executing this command in your shell
 
@@ -191,9 +187,10 @@ CHROM_SIZES=$REFERENCE_DIR/hg38.chrom.sizes
 REFERENCE_GENOME=$REFERENCE_DIR/hg38.genome.fa
 CV_SPLITS=$BASE_DIR/splits.json
 
-python bpnettrainer.py \
+mkdir $MODEL_DIR
+train \
     --output-dir $MODEL_DIR \
-    --splits 1_human_val_test_split \
+    --splits $CV_SPLITS \
     --input-data $DATA_DIR \
     --chrom-sizes $CHROM_SIZES \
     --reference-genome $REFERENCE_GENOME \
@@ -207,7 +204,16 @@ python bpnettrainer.py \
     --model-arch-name BPNet
 ```
 
-Please refer to the detailed <a href="">documentation</a> for an explanation of all the command line options
+The `splits.json` file contains information about the chromosomes that are used for validation and test. Here is a sample that contains one split.
+
+```
+{
+    "0": {
+        "val": ["chr10", "chr8"], 
+        "test": ["chr1"]
+    }
+}
+```
 
 Note: It might take a few minutes for the training to begin once the above command has been issued, be patient and you should see the training eventually start. For this experiment the training should complete in about an hour or atmost 2 hours depending on the GPU you are using. 
 
@@ -217,6 +223,7 @@ Once the training is complete we can generate prediction on the test chromosome.
 
 ```
 PREDICTIONS_DIR=$BASE_DIR/predictions
+mkdir $PREDICTIONS_DIR
 python predict.py \
     --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
     --chrom-sizes $CHROM_SIZES \
