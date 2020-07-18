@@ -5,11 +5,11 @@ import numpy as np
 import pysam
 import pyBigWig
 import random
-import batchgenutils
+
 from threading import Thread
 from queue import Queue
 from scipy.ndimage import gaussian_filter1d
-from batchgenutils import *
+from basepairmodels.cli.batchgenutils import *
 
 
 class MTBatchGenerator:
@@ -239,7 +239,7 @@ class MTBatchGenerator:
         warning_dispatched = False
         
         # number of data samples to assign to each processor
-        samples_per_processor = batchgenutils.roundToMultiple(
+        samples_per_processor = roundToMultiple(
             int(data.shape[0] / self.num_threads), 
             self.batch_size)
 

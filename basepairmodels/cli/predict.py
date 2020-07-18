@@ -1,4 +1,3 @@
-from basepairmodels.cli import argparsers
 import time
 import datetime
 import json
@@ -6,8 +5,9 @@ import os
 import pandas as pd
 import sys
 
-from basepairmodels.cli import logger
+from basepairmodels.cli import argparsers
 from basepairmodels.cli import bigwigutils
+from basepairmodels.cli import logger
 from basepairmodels.cli import MTBatchGenerator
 
 from basepairmodels.cli.batchgenutils import *
