@@ -34,7 +34,8 @@ setup(
             "train = basepairmodels.cli.bpnettrainer:main",
             "predict = basepairmodels.cli.predict:predict_main",
             "metrics = basepairmodels.cli.metrics:metrics_main",
-            "interpret = basepairmodels.cli.interpret:interpret_main"
+            "interpret = basepairmodels.cli.interpret:interpret_main",
+            "modisco = basepairmodels.cli.run_modisco:modisco_main"
         ]
     }
 )
