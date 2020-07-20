@@ -179,6 +179,19 @@ def modisco_main():
         print(pattern)
         print("pattern idx",idx)
         print(len(pattern.seqlets))
+        
+        pattern_seqlet_path = os.path.join(base_path,
+                                           'pattern{}_seqlets.txt'.format(idx))
+        with open(pattern_seqlet_path, "w") as f: 
+            for seqlet in pattern.seqlets:
+                sequence = "".join(
+                    bases[np.argmax(seqlet["sequence"].fwd, axis=-1)]
+                )
+                example_index = seqlet.coor.example_idx
+                start, end = seqlet.coor.start, seqlet.coor.end
+                f.write(">example%d:%d-%d\n" % (example_index, start, end))
+                f.write(sequence + "\n")
+
         save_plot(pattern["task0_contrib_scores"].fwd, 
                   '{}/contrib_{}.png'.format(base_path, idx))
         save_plot(pattern["sequence"].fwd,
