@@ -398,14 +398,15 @@ def modisco_argsparser():
     
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("-d", "--path_to_imp_scores_dir", type=str, 
-                        help="Path to the importance scores")
+    parser.add_argument("--scores-path", type=str, 
+                        help="Path to the importance scores hdf5 file")
     
-    parser.add_argument("-p", "--profile_or_counts", type=str, 
-                        help="scoring method to use, profile or counts scores")
+    parser.add_argument("--score-locations", type=str, 
+                        help="path to bed file containing the locations "
+                        "that match the scores")
+
+    parser.add_argument("--output-directory", type=str, 
+                        help="Path to the output directory")
     
-    parser.add_argument("-s", "--save_path", type=str, default=None, 
-                        help="Enter a save directory. If not provided, it is "
-                        "saved in the logdir")
     
     return parser

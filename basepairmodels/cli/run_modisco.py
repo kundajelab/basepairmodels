@@ -20,24 +20,11 @@ import modisco.core
 import modisco.coordproducers
 import modisco.metaclusterers
 import modisco.util
-import argparse
 
 from modisco.tfmodisco_workflow.seqlets_to_patterns import TfModiscoSeqletsToPatternsFactory
 from modisco.tfmodisco_workflow.workflow import TfModiscoWorkflow
 from modisco.visualization import viz_sequence
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Arguments for running tf-modisco')
-    parser.add_argument("-d","--path_to_imp_scores_dir", type=str, 
-                        help="Path to the importance scores")
-    parser.add_argument("-p","--profile_or_counts", type=str, 
-                        help="scoring method to use, profile or counts scores")
-    parser.add_argument("-save","--save_path", type=str, default=None, 
-                        help="Enter a save directory. If not provided, it is saved in the logdir")
-    args = parser.parse_args()
-    return args
+from basepairmodels.cli.argparser import modisco_argsparser
 
 
 def save_plot(weights, dst_fname):
@@ -62,41 +49,24 @@ def save_plot(weights, dst_fname):
 
 
 def modisco_main():
-    args = parse_args()
-    logdir_path = args.path_to_imp_scores_dir
+    parser = modisco_argsparser()
+    args = parser.parse_args()
 
-    if args.save_path:
-        base_path = args.save_path
-        print("A path to save has been provided. It is {}".format(base_path))
-    else:
-        base_path  = logdir_path    
-        print("No save path provided. Results will be saved at {}".format(base_path))
+    if not os.path.exists(args.scores_path):
+        raise quietexception.QuietException(
+            "Score file {} does not exist".format(args.scores_path))
+        
+    if not os.path.exists(args.scores_locations):
+        raise quietexception.QuietException(
+            "Scores locations file {} does not exist".format(
+                args.scores_locations))
+        
+    if not os.path.exists(args.output_directory):
+        raise quietexception.QuietException(
+            "Output directiry {} does not exist".format(args.output_directory))
 
-
-    assert(os.path.exists(logdir_path))
-    print("The path to the importance scores is {}".format(logdir_path))
-    scoring_type = args.profile_or_counts
-    if scoring_type=='profile':
-        scores_path = os.path.join(logdir_path,'profile_scores.h5')
-        print(" Scores path is {}".format(scores_path))
-    elif scoring_type=='counts':
-        scores_path  = os.path.join(logdir_path,'counts_scores.h5')
-        print(" Scores path is {}".format(scores_path))
-
-    else:
-        print("Enter a valid scoring type: counts or profile")
-
-    assert(os.path.exists(scores_path))
-
-    if scoring_type=='profile':
-        save_path = os.path.join(base_path,'modisco_results_allChroms_profile.hdf5')
-        seqlet_path = os.path.join(base_path,'seqlets_profile.txt')
-    elif scoring_type=='counts':
-        save_path  = os.path.join(base_path,'modisco_results_allChroms_counts.hdf5')
-        seqlet_path = os.path.join(base_path,'seqlets_counts.txt')
-
-    ##Load the scores
-    scores = deepdish.io.load(scores_path)
+    # Load the scores
+    scores = deepdish.io.load(args.scores_path)
     shap_scores_seq = []
     proj_shap_scores_seq = []
     one_hot_seqs = [] 
@@ -144,13 +114,14 @@ def modisco_main():
                                            hypothetical_contribs=task_to_hyp_scores, 
                                            one_hot=onehot_data)
 
-    if os.path.exists(save_path):
-        print("Saved file already exists. Removing it")
-        os.remove(save_path)
-
-    grp = h5py.File(save_path)
-    tfmodisco_results.save_hdf5(grp)
-    print("Saved modisco results to file {}".format(str(save_path)))
+    if args.suffix_tag is not None:
+        modisco_results_path = '{}/modisco_results_{}.hd5'.format(
+            args.output_dir, args.suffix_tag)
+    else:
+        modisco_results_path = '{}/modisco_results.hd5'.format(args.output_dir)
+        
+    tfmodisco_results.save_hdf5(h5py.File(modisco_results_path))
+    print("Saved modisco results to file {}".format(str(modisco_results_path)))
 
     print("Saving seqlets to %s" % seqlet_path)
     seqlets = \
@@ -175,6 +146,8 @@ def modisco_main():
                 .metacluster_idx_to_submetacluster_results[0]
                 .seqlets_to_patterns_result.patterns)
 
+    # generate .pngs of each motif and write motif seqlet to
+    # individual files
     for idx,pattern in enumerate(patterns):
         print(pattern)
         print("pattern idx",idx)
