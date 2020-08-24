@@ -1,22 +1,6 @@
 # BasepairModels
 
-BasepairModels is a python package with a CLI & API to train and interpret base-resolution deep neural networks trained on functional genomics data such as ChIP-nexus or ChIP-seq. It addresses the problem of pinpointing the regulatory elements in the genome:
-
-<img src="./docs-build/tutorial/bpnet/images/dna-words.png" alt="BPNet" />
-
-Specifically, it aims to answer the following questions:
-- What are the sequence motifs?
-- Where are they located in the genome?
-- How do they interact?
-
-For more information, see the BPNet manuscript:
-
-*Deep learning at base-resolution reveals motif syntax of the cis-regulatory code* (http://dx.doi.org/10.1101/737981)
-
-## Overview
-
-<img src="./docs-build/tutorial/bpnet/images/overview.png" alt="BPNet"/>
-
+BasepairModels is a python package with a CLI to train and interpret base-resolution deep neural networks trained on functional genomics data such as ChIP-nexus or ChIP-seq.
 
 ## Installation
 
@@ -172,7 +156,25 @@ For the sake of this tutorial let's assume we have a `reference` directory at th
 
 ### 2. Train a model!
 
-Now that we have our data prepped, we can now train our first model!!
+Before we start training, we need to compile a json file that contains information about the input data. Here is a sample json file that shows how to specify the input data information for the data we organized in Section 1.3. The data is organized into tracks. In this example we have two tracks, the plus and the minus strand. Each track has 4 required keys `strand`, `task_id`, `signal`, & `peaks` and one optional key `control`, which can be specified if control data is available. Notice how the `task_id` remains the same for the two tracks. We use the same `task_id` for the plus & minus pairs of the same experiment, and use `strand` to disinguish between the two, `0` for plus strand and `1` for the minus strand.
+
+
+```
+{
+    "task0_plus": {"strand": 0, 
+                  "task_id": 0, 
+                  "signal": "/users/john/ENCSR000EGM/data/plus.bw", 
+                  "control": "/users/john/ENCSR000EGM/data/control_plus.bw", 
+                  "peaks": "/users/john/ENCSR000EGM/data/peaks.bed"},
+    "task0_minus": {"strand": 1, 
+                   "task_id": 0, 
+                   "signal": "/users/john/ENCSR000EGM/data/minus.bw", 
+                   "control": "/users/john/ENCSR000EGM/data/control_minus.bw",
+                   "peaks": "/users/john/ENCSR000EGM/data/peaks.bed"} 
+}
+```
+
+Now that we have our data prepped, we can train our first model!!
 
 The command to train a model is called `train`. 
 
@@ -186,12 +188,13 @@ REFERENCE_DIR=~/reference
 CHROM_SIZES=$REFERENCE_DIR/hg38.chrom.sizes
 REFERENCE_GENOME=$REFERENCE_DIR/hg38.genome.fa
 CV_SPLITS=$BASE_DIR/splits.json
+INPUT_DATA=$BASE_DIR/input_data.json
 
 mkdir $MODEL_DIR
 train \
     --output-dir $MODEL_DIR \
     --splits $CV_SPLITS \
-    --input-data $DATA_DIR \
+    --input-data $INPUT_DATA \
     --chrom-sizes $CHROM_SIZES \
     --reference-genome $REFERENCE_GENOME \
     --threads 10 \
