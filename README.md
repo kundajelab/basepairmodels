@@ -278,14 +278,12 @@ interpret \
 MODISCO_PROFILE_DIR=$BASE_DIR/modisco_profile
 mkdir $MODISCO_PROFILE_DIR
 modisco \
-    -d $INTERPRET_DIR/[TIME STAMP] \
-    -p profile \
-    -save $MODISCO_PROFILE_DIR
+    ---scores-path $INTERPRET_DIR/<path to profile scores file> \
+    --output-directory $MODISCO_PROFILE_DIR
 
 MODISCO_COUNTS_DIR=$BASE_DIR/modisco_counts
 mkdir $MODISCO_COUNTS_DIR
 modisco \ 
-    -d $INTERPRET_DIR/[TIME STAMP] \
-    -p counts \
-    -save $MODISCO_COUNTS_DIR
+    ---scores-path $INTERPRET_DIR/<path to counts scores file> \
+    --output-directory $MODISCO_COUNTS_DIR
 ```
