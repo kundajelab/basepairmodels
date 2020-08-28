@@ -62,7 +62,6 @@ def main():
     input_params['data'] = args.input_data
     input_params['stranded'] = args.stranded
     input_params['has_control'] = args.has_control
-    input_params['control_smoothing'] = args.control_smoothing
 
     # output params 
     output_params = {}
@@ -110,6 +109,7 @@ def main():
     network_params['name'] = args.model_arch_name
     network_params['filters'] = args.filters
     network_params['counts_loss_weight'] = args.counts_loss_weight
+    network_params['control_smoothing'] = args.control_smoothing
     
     if not os.path.exists(output_params['output_dir']):
         raise quietexception.QuietException(

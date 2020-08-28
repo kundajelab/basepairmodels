@@ -171,14 +171,14 @@ def train_and_validate(input_params, output_params, genome_params,
     val_generator = val_gen.gen()
 
     # lets make sure the sizes look reasonable
-    logging.info("TRAINING SIZE - {}".format(train_gen.data.shape))
-    logging.info("VALIDATION SIZE - {}".format(val_gen.data.shape))
+    logging.info("TRAINING SIZE - {}".format(train_gen._samples.shape))
+    logging.info("VALIDATION SIZE - {}".format(val_gen._samples.shape))
 
     # we need to calculate the number of training steps and 
     # validation steps in each epoch, fit_generator requires this
     # to determine the end of an epoch
-    train_steps = train_gen.get_num_batches_per_epoch()
-    val_steps = val_gen.get_num_batches_per_epoch()
+    train_steps = train_gen.len()
+    val_steps = val_gen.len()
 
     # we may have to reduce the --threads sometimes
     # if the peak file has very few peaks, so we need to
@@ -214,9 +214,9 @@ def train_and_validate(input_params, output_params, genome_params,
     get_model = getattr(model_archs, network_params['name'])
     model = get_model(train_batch_gen_params['input_seq_len'], 
                       train_batch_gen_params['output_len'],
-                      len(input_params['control_smoothing']) + 1,
+                      len(network_params['control_smoothing']) + 1,
                       filters=network_params['filters'], 
-                      num_tasks=train_gen.num_tasks)
+                      num_tasks=train_gen._num_tasks)
     
     model.summary()
 
@@ -229,7 +229,7 @@ def train_and_validate(input_params, output_params, genome_params,
     logging.debug("Compiling model")
     model.compile(Adam(lr=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
-                        train_gen.num_tasks), 'mse'], 
+                        train_gen._num_tasks), 'mse'], 
                     loss_weights=[1, network_params['counts_loss_weight']])
     
     # begin time for training
