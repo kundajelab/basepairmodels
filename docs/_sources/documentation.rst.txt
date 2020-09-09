@@ -1,0 +1,43 @@
+**********************
+Command Line Interface
+**********************
+
+bpnettrainer
+=============
+
+.. argparse::
+    :module: basepairmodels.cli.argparsers
+    :func: training_argsparser
+    :prog: bpnettrainer
+
+predict
+=======
+
+.. argparse::
+    :module: basepairmodels.cli.argparsers
+    :func: predict_argsparser
+    :prog: predict
+
+metrics
+=======
+
+.. argparse::
+    :module: basepairmodels.cli.argparsers
+    :func: metrics_argsparser
+    :prog: metrics
+
+interpret
+=========
+
+.. argparse::
+    :module: basepairmodels.cli.argparsers
+    :func: interpret_argsparser
+    :prog: interpret
+
+run_modisco
+===========
+
+.. argparse::
+    :module: basepairmodels.cli.argparsers
+    :func: modisco_argsparser
+    :prog: run_modisco

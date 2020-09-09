@@ -1,0 +1,11 @@
+*************
+Installation 
+*************
+
+.. role:: bash(code)
+   :language: bash
+
+:bash:`git clone https://github.com/kundajelab/basepairmodels.git`.
+:bash:`cd basepairmodels`
+:bash:`pip install .`
+
