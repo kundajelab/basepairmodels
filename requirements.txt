@@ -15,7 +15,8 @@ pyfaidx
 modisco
 deeplift
 tqdm
-git+https://github.com/AvantiShri/shap.git
-git+https://github.com/kundajelab/mseqgen.git
 pycodestyle
 pytest
+git+https://github.com/AvantiShri/shap.git
+git+https://github.com/kundajelab/mseqgen.git
+
