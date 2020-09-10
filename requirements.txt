@@ -19,4 +19,5 @@ pycodestyle
 pytest
 git+https://github.com/AvantiShri/shap.git
 git+https://github.com/kundajelab/mseqgen.git
+pandas
 
