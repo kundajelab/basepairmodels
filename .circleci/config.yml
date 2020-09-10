@@ -17,6 +17,8 @@ jobs:
           key: deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
           paths:
             - "venv"
+            - "/usr/local/bin"
+            - "/usr/local/lib/python3.7/site-packages"
       - run:
           command: |
             pipenv run python -m pytest
