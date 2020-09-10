@@ -5,17 +5,9 @@
    installation
    documentation
    tutorial
+   modules
    miscellaneous
    
-
-********
-Modules
-********
-
-Loss Functions
-==============
-.. automodule:: basepairmodels.cli.losses
-    :members:
 
 
 Indices and tables

@@ -2,10 +2,26 @@
 Installation 
 *************
 
-.. role:: bash(code)
-   :language: bash
+1. Install Miniconda
+--------------------
 
-:bash:`git clone https://github.com/kundajelab/basepairmodels.git`.
-:bash:`cd basepairmodels`
-:bash:`pip install .`
+Download and install the latest python 3.7 version of Miniconda for your platform. Here is the link for the installers
+`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__
+
+2. Create new virtual environment
+---------------------------------
+
+Create a new virtual environment and activate it as shown below
+
+.. code-block:: bash
+
+    conda create --name basepairmodels python=3.7
+    activate basepairmodels`
+
+
+3. Install basepairmodels
+-------------------------
+.. code-block:: bash
+
+    pip install --no-cache-dir --ignore-installed git+https://github.com/kundajelab/basepairmodels.git
 

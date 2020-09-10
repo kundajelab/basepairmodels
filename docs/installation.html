@@ -84,9 +84,14 @@
             
               <p class="caption"><span class="caption-text">BPNet Documentatation</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install-miniconda">1. Install Miniconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-new-virtual-environment">2. Create new virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-basepairmodels">3. Install basepairmodels</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="documentation.html">Command Line Interface</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">TUTORIAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">CLI Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="miscellaneous.html">MISCELLANEOUS</a></li>
 </ul>
 
@@ -155,9 +160,25 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p><code class="code bash docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/kundajelab/basepairmodels.git</span></code>.
-<code class="code bash docutils literal notranslate"><span class="name builtin"><span class="pre">cd</span></span> <span class="pre">basepairmodels</span></code>
-<code class="code bash docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code></p>
+<div class="section" id="install-miniconda">
+<h2>1. Install Miniconda<a class="headerlink" href="#install-miniconda" title="Permalink to this headline">¶</a></h2>
+<p>Download and install the latest python 3.7 version of Miniconda for your platform. Here is the link for the installers
+<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a></p>
+</div>
+<div class="section" id="create-new-virtual-environment">
+<h2>2. Create new virtual environment<a class="headerlink" href="#create-new-virtual-environment" title="Permalink to this headline">¶</a></h2>
+<p>Create a new virtual environment and activate it as shown below</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda create --name basepairmodels <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.7
+activate basepairmodels<span class="sb">`</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-basepairmodels">
+<h2>3. Install basepairmodels<a class="headerlink" href="#install-basepairmodels" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install --no-cache-dir --ignore-installed git+https://github.com/kundajelab/basepairmodels.git
+</pre></div>
+</div>
+</div>
 </div>
 
 
