@@ -234,7 +234,7 @@ predict \
     --reference-genome $REFERENCE_GENOME \
     --exponentiate-counts \
     --output-dir $PREDICTIONS_DIR \
-    --data-dir $DATA_DIR \
+    --input-data $INPUT_DATA \
     --predict-peaks \
     --write-buffer-size 2000 \
     --batch-size 1 \
