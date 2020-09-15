@@ -318,20 +318,23 @@ def predict_main():
     # set up the loggers
     logger.init_logger(logfname)
     
-    # get the dictionary of input tasks
-    input_data = getInputTasks(args.data_dir, stranded=args.stranded, 
-                               has_control=args.has_control, mode='test',
-                               require_peaks=args.predict_peaks)
-    
-    # if there was a problem constructing the input tasks dictionary
-    if input_data is None:
-        return
-
-    if len(input_data) == 0:
-        logging.error("The --data-dir supplied does not seem to have the "
-                      "correct data. Please correct your path and try again.")
-        return
+    # make sure the input_data json file exists
+    if not os.path.isfile(args.input_data):
+        raise quietexception.QuietException(
+            "File not found: {} OR you may have accidentally "
+            "specified a directory path.".format(args.input_data))
         
+    # load the json file
+    with open(args.input_data, 'r') as inp_json:
+        try:
+            #: dictionary of tasks for training
+            input_data = json.loads(inp_json.read())
+        except json.decoder.JSONDecodeError:
+            raise quietexception.QuietException(
+                "Unable to load json file {}. Valid json expected. "
+                "Check the file for syntax errors.".format(
+                    args.input_data))
+
     logging.info("INPUT DATA -\n{}".format(input_data))
 
     # predict

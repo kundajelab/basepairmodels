@@ -122,8 +122,8 @@ def training_argsparser():
         
     # input data params
     parser.add_argument('--input-data', '-i', type=str,
-                        help="input directory containing bigWigs and peaks", 
-                        default=".")
+                        help="path to json file containing task information", 
+                        required=True)
     
     parser.add_argument('--stranded', action='store_true', 
                         help="specify if the input data is stranded or "
@@ -177,9 +177,9 @@ def predict_argsparser():
     parser.add_argument('--chroms', '-c', nargs='+', required=True,
                         help="list of test chromosomes for prediction")
         
-    parser.add_argument('--data-dir', type=str,
-                        help="input directory containing bigWigs and peaks", 
-                        default=".")
+    parser.add_argument('--input-data', '-i', type=str,
+                        help="path to json file containing task information", 
+                        required=True)
     
     parser.add_argument('--stranded', action='store_true', 
                         help="specify if the input data is stranded or "
