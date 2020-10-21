@@ -385,7 +385,7 @@ def interpret_argsparser():
 
     #reference params
     parser.add_argument('--reference-genome', '-g', type=str, required=True,
-                        help="number of gpus to use", default=1)
+                        help="path to the reference genome file", default=1)
     return parser
 
 
@@ -407,6 +407,58 @@ def modisco_argsparser():
 
     parser.add_argument("--output-directory", type=str, 
                         help="Path to the output directory")
+    
+    
+    return parser
+
+
+def embeddings_argsparser():
+    """ Command line arguments for the embeddings script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+    
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--model', '-m', type=str, required=True,
+                        help="the path to the model (.h5) file")
+    
+    parser.add_argument('--reference-genome', '-g', type=str, required=True,
+                        help="number of gpus to use")
+    
+    parser.add_argument('--input-layer-name', '-i', type=str, 
+                        help="name of the input sequence layer", 
+                        default='sequence')
+
+    parser.add_argument('--input-layer-shape', '-s', nargs='+', required=True,
+                        type=int,
+                        help="shape of the input sequence layer (specify"
+                        "list of values and omit the batch(?) dimension)")
+    
+    parser.add_argument('--embeddings-layer-name', '-e', type=str, 
+                        help="name of the embeddings layer", 
+                        default='combined_conv')
+    
+    parser.add_argument('--flatten-embeddings-layer', '-l', 
+                        action='store_true', 
+                        help="specify if the embeddings layers should be"
+                        "flattened")
+
+    parser.add_argument('--chrom-positions', '-c', type=str, 
+                        help="2 column csv file containing chromosome"
+                        "positions to compute embeddings")
+    
+    parser.add_argument('--batch-size', '-b', type=int, 
+                        help="batch size for processing the "
+                        "chromosome positions", default=64)
+        
+    parser.add_argument('--output-directory', '-o', type=str,
+                        help="output directory path", default='.')
+    
+    parser.add_argument('--output-filename', '-f', type=str,
+                        help="name of compressed numpy file to store "
+                        "the embeddings", default="embeddings.npz")
     
     
     return parser
