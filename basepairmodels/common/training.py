@@ -139,8 +139,10 @@ def train_and_validate(input_params, output_params, genome_params,
     val_batch_gen_params['mode'] = 'val'
 
     # get the corresponding batch generator class for this model
-    BatchGenerator = getattr(generators, 'M{}SequenceGenerator'.format(
-        network_params['name']))
+    sequence_generator_class_name = generators.find_generator_by_name(
+        batch_gen_params['sequence_generator_name'])
+    logging.info("SEQGEN Class Name: {}".format(sequence_generator_class_name))
+    BatchGenerator = getattr(generators, sequence_generator_class_name)
 
     # instantiate the batch generator class for training
     train_gen = BatchGenerator(input_params, train_batch_gen_params, 

@@ -40,6 +40,11 @@ def training_argsparser():
                         "to fetch the model from model_archs)",
                         default='BPNet')
 
+    parser.add_argument('--sequence-generator-name', type=str,
+                        help="the name of the sequence generator from "
+                        "mseqgen library that will be used to generate "
+                        "batches of data ", default='BPNet')
+
     parser.add_argument('--filters', '-f', type=int,
                         help="number of filters to use in BPNet",
                         default=64)

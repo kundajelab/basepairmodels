@@ -80,6 +80,7 @@ def main():
 
     # batch generation parameters
     batch_gen_params = {}    
+    batch_gen_params['sequence_generator_name'] = args.sequence_generator_name
     batch_gen_params['input_seq_len'] = args.input_seq_len
     batch_gen_params['output_len'] = args.output_len
     batch_gen_params['sampling_mode'] = args.sampling_mode
