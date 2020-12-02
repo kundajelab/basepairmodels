@@ -263,7 +263,7 @@ def metrics_main():
     np.savez_compressed('{}/pearson'.format(metrics_dir), pearson=pearson)
     np.savez_compressed('{}/spearman'.format(metrics_dir), spearman=spearman)
     np.savez_compressed('{}/jsd'.format(metrics_dir), jsd=jsd)
-    np.savez_compressed('{}/counts_pearson'.format(metrics_dir),counts_pearson)
+    np.savez_compressed('{}/counts_pearson'.format(metrics_dir), counts_pearson=counts_pearson)
     
     
     # write all the command line arguments to a json file
