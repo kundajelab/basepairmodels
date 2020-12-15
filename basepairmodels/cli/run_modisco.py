@@ -24,7 +24,7 @@ import modisco.util
 from modisco.tfmodisco_workflow.seqlets_to_patterns import TfModiscoSeqletsToPatternsFactory
 from modisco.tfmodisco_workflow.workflow import TfModiscoWorkflow
 from modisco.visualization import viz_sequence
-from basepairmodels.cli.argparser import modisco_argsparser
+from basepairmodels.cli.argparsers import modisco_argsparser
 
 
 def save_plot(weights, dst_fname):
