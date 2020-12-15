@@ -56,10 +56,10 @@ def modisco_main():
         raise quietexception.QuietException(
             "Score file {} does not exist".format(args.scores_path))
         
-    if not os.path.exists(args.scores_locations):
-        raise quietexception.QuietException(
-            "Scores locations file {} does not exist".format(
-                args.scores_locations))
+#     if not os.path.exists(args.scores_locations):
+#         raise quietexception.QuietException(
+#             "Scores locations file {} does not exist".format(
+#                 args.scores_locations))
         
     if not os.path.exists(args.output_directory):
         raise quietexception.QuietException(
