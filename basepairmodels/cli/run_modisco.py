@@ -114,11 +114,7 @@ def modisco_main():
                                            hypothetical_contribs=task_to_hyp_scores, 
                                            one_hot=onehot_data)
 
-    if args.suffix_tag is not None:
-        modisco_results_path = '{}/modisco_results_{}.hd5'.format(
-            args.output_dir, args.suffix_tag)
-    else:
-        modisco_results_path = '{}/modisco_results.hd5'.format(args.output_dir)
+    modisco_results_path = '{}/modisco_results.hd5'.format(args.output_directory)
         
     tfmodisco_results.save_hdf5(h5py.File(modisco_results_path))
     print("Saved modisco results to file {}".format(str(modisco_results_path)))
@@ -137,10 +133,7 @@ def modisco_main():
             f.write(">example%d:%d-%d\n" % (example_index, start, end))
             f.write(sequence + "\n")
 
-
     print("Saving pattern visualizations")
-
-
 
     patterns = (tfmodisco_results
                 .metacluster_idx_to_submetacluster_results[0]
@@ -153,7 +146,7 @@ def modisco_main():
         print("pattern idx",idx)
         print(len(pattern.seqlets))
         
-        pattern_seqlet_path = os.path.join(base_path,
+        pattern_seqlet_path = os.path.join(args.output_directory,
                                            'pattern{}_seqlets.txt'.format(idx))
         with open(pattern_seqlet_path, "w") as f: 
             for seqlet in pattern.seqlets:
@@ -166,9 +159,9 @@ def modisco_main():
                 f.write(sequence + "\n")
 
         save_plot(pattern["task0_contrib_scores"].fwd, 
-                  '{}/contrib_{}.png'.format(base_path, idx))
+                  '{}/contrib_{}.png'.format(args.output_directory, idx))
         save_plot(pattern["sequence"].fwd,
-                  '{}/sequence_{}.png'.format(base_path, idx))
+                  '{}/sequence_{}.png'.format(args.output_directory, idx))
 
 
 if __name__ == '__main__':
