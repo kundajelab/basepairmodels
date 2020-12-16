@@ -118,7 +118,9 @@ def modisco_main():
         
     tfmodisco_results.save_hdf5(h5py.File(modisco_results_path))
     print("Saved modisco results to file {}".format(str(modisco_results_path)))
+    
 
+    seqlet_path = '{}/seqlets.txt'.format(args.output_directory)
     print("Saving seqlets to %s" % seqlet_path)
     seqlets = \
         tfmodisco_results.metacluster_idx_to_submetacluster_results[0].seqlets
