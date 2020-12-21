@@ -251,6 +251,7 @@ def metrics_main():
         idx += 1
 
     counts_pearson = pearsonr(countsA, countsB)[0]
+    counts_spearman = spearmanr(countsA, countsB)[0]
     
     print("\t\t", "median", "\t\t", "max", "\t\t", "min")
     print("pearson", np.median(pearson), max(pearson), min(pearson)) 
@@ -258,12 +259,16 @@ def metrics_main():
     print("jsd", np.median(jsd), max(jsd), min(jsd))
     print("mse", np.median(mse), max(mse), min(mse))
     print("counts pearson", counts_pearson)
+    print("counts spearman", counts_spearman)
 
     np.savez_compressed('{}/mse'.format(metrics_dir), mse=mse)
     np.savez_compressed('{}/pearson'.format(metrics_dir), pearson=pearson)
     np.savez_compressed('{}/spearman'.format(metrics_dir), spearman=spearman)
     np.savez_compressed('{}/jsd'.format(metrics_dir), jsd=jsd)
-    np.savez_compressed('{}/counts_pearson'.format(metrics_dir), pearson=pearson)
+    np.savez_compressed('{}/counts_pearson'.format(metrics_dir), 
+                        counts_pearson=counts_pearson)
+    np.savez_compressed('{}/counts_spearman'.format(metrics_dir), 
+                        counts_spearman=counts_spearman)
     
     
     # write all the command line arguments to a json file
