@@ -123,15 +123,25 @@ def interpret(args, interpret_dir):
     weightedsum_meannormed_logits = get_weightedsum_meannormed_logits(
         model, task_id=args.task_id, stranded=True)
 
+    def data_func(model_inputs):
+        rng = np.random.RandomState(args.seed)
+        return [dinuc_shuffle(model_inputs[0], args.num_shuffles, rng)] + \
+        [
+            np.tile(
+                np.zeros_like(model_inputs[i]),
+                (args.num_shuffles,) + (len(model_inputs[i].shape) * (1,))
+            ) for i in range(1, len(model_inputs))
+        ]
+    
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
         ([model.input[0], model.input[1]], 
          tf.reduce_sum(model.outputs[1], axis=-1)),
-        shuffle_several_times, 
+        data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
 
     profile_model_profile_explainer = shap.explainers.deep.TFDeepExplainer(
         ([model.input[0], model.input[2]], weightedsum_meannormed_logits),
-        shuffle_several_times, 
+        data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
 
     logging.info("Generating 'counts' shap scores")
@@ -154,7 +164,7 @@ def interpret(args, interpret_dir):
     
     logging.info("Generating 'profile' shap scores")
     profile_shap_scores = profile_model_profile_explainer.shap_values(
-        [X, np.zeros((X.shape[0], 1000, 2))], progress_message=100)
+        [X, np.zeros((X.shape[0], args.control_len, 2))], progress_message=100)
           
     # construct a dictionary for the 'profile' shap scores & the
     # the projected 'profile' shap scores
