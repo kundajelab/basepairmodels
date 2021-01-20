@@ -517,3 +517,54 @@ def logits2profile_argsparser():
                         "counts conversion", default=1000)
     
     return parser
+
+
+def bounds_argsparser():
+    """ Command line arguments for the bounds script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+    
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--input-profiles', nargs='+',
+                        help="list of input bigWig profile", default=[])
+
+    parser.add_argument('--output-names', nargs='+',
+                        help="list of outputnames for the bounds output "
+                        "corresponding to each of the input profiles", 
+                        default=[]) 
+
+    parser.add_argument('--output-directory', type=str, required=True,
+                        help="Path to the output directory")
+
+    parser.add_argument('--peaks', type=str, required=True,
+                        help="Path to the bed file containing the chromosome "
+                        "coordinates. The bed file should have at least "
+                        "3 columns, the first 3 being 'chrom', 'start', "
+                        "and 'end'")
+    
+    parser.add_argument('--peak-width', type=int,
+                        help="the span of the peak to be considered for "
+                        "bounds computation", default=1000)
+    
+    parser.add_argument('--chroms', '-c', nargs='+',
+                        help="list of chromosomes to be considered from "
+                        "peaks file")
+        
+    parser.add_argument('--smoothing-params', nargs='+',
+                        help="sigma and window size for gaussian 1D smoothing "
+                        "of 'observed' and 'predicted' profiles", 
+                        default=[7.0, 81])
+    
+    parser.add_argument('--num-upper-bound-pseudoreplicate-pairs', type=int,
+                        help="the number of pseudoreplicate pairs to generate "
+                        "when computing upper bounds", default=1)
+    
+    parser.add_argument('--upper-bound-aggregation-method', type=str, 
+                        choices=['max', 'avg'], default='max',
+                        help="If --num-upper-bound-pseudoreplicate-pairs > 1, " 
+                        "this specifies how the upper bound values should be "
+                        "aggregated")
+    return parser
