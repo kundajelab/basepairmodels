@@ -5,21 +5,22 @@ from setuptools import setup, find_packages
 
 setup(
     name="basepairmodels",
-    version='0.1.0',
+    version='0.1.1',
     description=("BPNet: toolkit to learn motif synthax from high-resolution functional genomics data"
                  " using convolutional neural networks"),
     author="Zahoor Zafrulla",
     author_email="zahoor@stanford.edu",
     url="https://github.com/kundajelab/basepairmodels",
     packages=find_packages(exclude=["docs", "docs-build"]),
-    install_requires=["h5py==2.10.0","tensorflow-gpu==1.14", "tensorflow-probability==0.7", 
-                      "keras==2.2.4", "scikit-learn", 
-                      "scipy", "scikit-image", "scikit-learn", "deepdish",
-                      "numpy==1.16.4", "pandas", "matplotlib", "plotly", 
-                      "deeptools", "pyfaidx", "modisco", "deeplift", "tqdm",
-                      "shap @ git+https://github.com/AvantiShri/shap.git", 
-                      "mseqgen @ git+https://github.com/kundajelab/mseqgen.git"],
-    extras_require={"dev": ["pytest", "pytest-cov"]},
+   install_requires=["h5py==2.10.0", 
+                     "tensorflow-gpu==1.14", "tensorflow-probability==0.7",
+                     "keras==2.2.4",
+                     "scikit-learn", "scipy", "scikit-image", "scikit-learn", 
+                     "deepdish", "pandas", "matplotlib", "plotly", 
+                     "deeptools", "pyfaidx", "modisco", "deeplift", "tqdm",
+                     "shap @ git+https://github.com/AvantiShri/shap.git", 
+                     "mseqgen @ git+https://github.com/kundajelab/mseqgen.git"],
+   extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
     zip_safe=False,
     keywords=["deep learning",
@@ -35,7 +36,9 @@ setup(
             "predict = basepairmodels.cli.predict:predict_main",
             "metrics = basepairmodels.cli.metrics:metrics_main",
             "interpret = basepairmodels.cli.interpret:interpret_main",
-            "modisco = basepairmodels.cli.run_modisco:modisco_main"
+            "modisco = basepairmodels.cli.run_modisco:modisco_main",
+            "logits2profile = basepairmodels.cli.logits2profile:logits2profile_main",
+            "bounds = basepairmodels.cli.bounds:bounds_main"
         ]
     }
 )
