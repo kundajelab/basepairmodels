@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>Installation &mdash; BPNet 0.1.0 documentation</title>
   
@@ -16,7 +16,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -29,7 +32,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -51,7 +53,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> BPNet
+            <a href="index.html" class="icon icon-home"> BPNet
           
 
           
@@ -134,6 +136,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -145,7 +149,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/installation.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -163,14 +167,14 @@
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="install-miniconda">
 <h2>1. Install Miniconda<a class="headerlink" href="#install-miniconda" title="Permalink to this headline">¶</a></h2>
-<p>Download and install the latest python 3.7 version of Miniconda for your platform. Here is the link for the installers
+<p>Download and install the latest version of Miniconda for your platform. Check to see your python verion <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">--version</span></code> before downloading Miniconda. Install the matching Miniconda version for your version of python (this does not affect the version of python that you install in the new environments you create). Here is the link for the installers
 <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a></p>
 </div>
 <div class="section" id="create-new-virtual-environment">
 <h2>2. Create new virtual environment<a class="headerlink" href="#create-new-virtual-environment" title="Permalink to this headline">¶</a></h2>
 <p>Create a new virtual environment and activate it as shown below</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda create --name basepairmodels <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.7
-activate basepairmodels<span class="sb">`</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda create --name basepairmodels <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6.8
+conda activate basepairmodels
 </pre></div>
 </div>
 </div>
@@ -187,37 +191,29 @@ activate basepairmodels<span class="sb">`</span>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="documentation.html" class="btn btn-neutral float-right" title="Command Line Interface" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="index.html" class="btn btn-neutral float-left" title="Indices and tables" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="documentation.html" class="btn btn-neutral float-right" title="Command Line Interface" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Indices and tables" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Zahoor Zafrulla, Ziga Avsec, Avanti Shrikumar, Anshul Kundaje
+        &#169; Copyright 2020, Zahoor Zafrulla, Ziga Avsec, Avanti Shrikumar, Anshul Kundaje.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 

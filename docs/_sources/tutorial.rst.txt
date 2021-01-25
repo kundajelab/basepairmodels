@@ -262,6 +262,9 @@ Once the training is complete we can generate prediction on the test chromosome.
        -B [path to predictions bigwig] \
        --peaks $DATA_DIR/peaks.bed \
        --chroms chr1 \
+       --smooth-profileA <sigma> <window_width> \
+       --apply-softmax-to-profileB \
+       --countsB [path to exponentiated counts predictions bigWig] \
        --output-dir $METRICS_DIR \
        --chrom-sizes $CHROM_SIZES
 

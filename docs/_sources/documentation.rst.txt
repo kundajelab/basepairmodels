@@ -41,3 +41,27 @@ run_modisco
     :module: basepairmodels.cli.argparsers
     :func: modisco_argsparser
     :prog: run_modisco
+
+logit2profile
+===========
+
+.. argparse::
+    :module: basepairmodels.cli.logits2profile
+    :func: logits2profile_argsparser
+    :prog: logits2profile
+
+bounds
+===========
+
+.. argparse::
+    :module: basepairmodels.cli.bounds
+    :func: bounds_argsparser
+    :prog: bounds
+
+embeddings
+===========
+
+.. argparse::
+    :module: basepairmodels.cli.embeddings
+    :func: embeddings_argsparser
+    :prog: embeddings
