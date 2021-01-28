@@ -197,19 +197,25 @@ def interpret_main():
     # parse the command line arguments
     parser = interpret_argsparser()
     args = parser.parse_args()
-
+    
     # check if the output directory exists
     if not os.path.exists(args.output_dir):
         logging.error("Directory {} does not exist".format(
             args.output_dir))
         return
-    
-    # create a new directory using current date/time to store the
-    # interpretation scores
-    date_time_str = local_datetime_str(args.time_zone)
-    interpret_dir = '{}/{}'.format(args.output_dir, date_time_str)
-    os.mkdir(interpret_dir)
-    
+
+    if args.automate_filenames:
+        # create a new directory using current date/time to store the
+        # interpretation scores
+        date_time_str = local_datetime_str(args.time_zone)
+        interpret_dir = '{}/{}'.format(args.output_dir, date_time_str)
+        os.mkdir(interpret_dir)
+    elif os.path.isdir(args.output_dir):
+        interpret_dir = args.output_dir        
+    else:
+        logging.error("Directory does not exist {}.".format(args.output_dir))
+        return
+
     # filename to write debug logs
     logfname = "{}/interpret.log".format(interpret_dir)
     

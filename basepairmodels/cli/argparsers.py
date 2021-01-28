@@ -388,6 +388,11 @@ def interpret_argsparser():
                         help="destination directory to store the "
                         "interpretation scores")
     
+    parser.add_argument('--automate-filenames', action='store_true', 
+                        help="specify if the interpret output should "
+                        "be stored in a timestamped subdirectory within "
+                        "--output-dir")
+
     parser.add_argument('--time-zone', '-t', type=str,
                         help="time zone to use for timestamping output "
                         "directories", default='US/Pacific')
