@@ -16,6 +16,7 @@ from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nl
 
 from keras.models import load_model
 from keras.utils import CustomObjectScope
+from mseqgen import quietexception
 from tqdm import tqdm
 
 def predict(args, input_data, pred_dir):    
