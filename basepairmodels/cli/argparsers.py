@@ -562,14 +562,5 @@ def bounds_argsparser():
                         help="sigma and window size for gaussian 1D smoothing "
                         "of 'observed' and 'predicted' profiles", 
                         default=[7.0, 81])
-    
-    parser.add_argument('--num-upper-bound-pseudoreplicate-pairs', type=int,
-                        help="the number of pseudoreplicate pairs to generate "
-                        "when computing upper bounds", default=1)
-    
-    parser.add_argument('--upper-bound-aggregation-method', type=str, 
-                        choices=['max', 'avg'], default='max',
-                        help="If --num-upper-bound-pseudoreplicate-pairs > 1, " 
-                        "this specifies how the upper bound values should be "
-                        "aggregated")
+
     return parser
