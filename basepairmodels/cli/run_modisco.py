@@ -99,15 +99,12 @@ def modisco_main():
     #     one_hot=onehot_data)
 
 
-    tfmodisco_patterns_factory = TfModiscoSeqletsToPatternsFactory(
-        trim_to_window_size=20, initial_flank_to_add=5, kmer_len=8, num_gaps=1, 
-        num_mismatches=0, final_min_cluster_size=20)
-
     tfmodisco_workflow = modisco.tfmodisco_workflow.workflow.TfModiscoWorkflow(
-        #Slight modifications from the default settings
-        sliding_window_size=20, flank_size=5, target_seqlet_fdr=0.05, 
-        max_seqlets_per_metacluster=20000, 
-        seqlets_to_patterns_factory=tfmodisco_patterns_factory)
+        sliding_window_size=21, flank_size=10, target_seqlet_fdr=0.05, 
+        seqlets_to_patterns_factory=modisco.tfmodisco_workflow.seqlets_to_patterns.TfModiscoSeqletsToPatternsFactory(
+            embedder_factory=modisco.seqlet_embedding.advanced_gapped_kmer.AdvancedGappedKmerEmbedderFactory(),
+            trim_to_window_size=30, initial_flank_to_add=10, 
+            final_min_cluster_size=30))
 
     tfmodisco_results = tfmodisco_workflow(task_names=["task0"], 
                                            contrib_scores=task_to_scores, 
