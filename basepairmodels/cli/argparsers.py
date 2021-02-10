@@ -290,6 +290,11 @@ def metrics_argsparser():
     
     parser.add_argument('--peaks', type=str, 
                         help="the path to the file containing ")
+    
+    parser.add_argument('--bounds-csv', type=str, 
+                        help="the path to the file containing upper and"
+                        "lower bounds for mnll, cross entropy, jsd,"
+                        "pearson & spearman correlation")
 
     parser.add_argument('--step-size', type=int,
                         help="the step size for genome wide metrics", 

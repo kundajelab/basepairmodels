@@ -1,10 +1,10 @@
-import tensorflow as tf
-
 from basepairmodels.cli.argparsers import metrics_argsparser
 from basepairmodels.cli.batchgenutils import *
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.logger import *
-from basepairmodels.cli.losses import multinomial_nll
+
+
+from mseqgen import quietexception
 
 import json
 import numpy as np
@@ -13,8 +13,132 @@ import pyBigWig
 
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
-from scipy.stats import pearsonr, spearmanr, binned_statistic
+from scipy.stats import pearsonr, spearmanr, multinomial
 from scipy.special import logsumexp
+from tqdm import tqdm
+
+def mnll(true_counts, logits=None, probs=None):
+    """
+        Compute the multinomial negative log-likelihood between true
+        counts and predicted values of a BPNet-like profile model
+        
+        One of `logits` or `probs` must be given. If both are
+        given `logits` takes preference.
+
+        Args:
+            true_counts (numpy.array): observed counts values
+            
+            logits (numpy.array): predicted logits values
+            
+            probs (numpy.array): predicted values as probabilities
+          
+        Returns:
+            float: cross entropy
+    
+    """
+
+    dist = None 
+    
+    if logits is not None:
+        
+        # check for length mismatch
+        if len(logits) != len(true_counts):
+            raise quietexception.QuietException(
+                "Length of logits does not match length of true_counts")
+        
+        # convert logits to softmax probabilities
+        probs = logits - logsumexp(logits)
+        probs = np.exp(probs)
+        
+    elif probs is not None:      
+        
+        # check for length mistmatch
+        if len(probs) != len(true_counts):
+            raise quietexception.QuietException(
+                "Length of probs does not match length of true_counts")
+        
+        # check if probs sums to 1
+        if abs(1.0 - np.sum(probs)) > 1e-3:
+            raise quietexception.QuietException(
+                "'probs' array does not sum to 1")   
+           
+    else:
+        
+        # both 'probs' and 'logits' are None
+        raise quietexception.QuietException(
+            "At least one of probs or logits must be provided. "
+            "Both are None.")
+  
+    # compute the nmultinomial distribution
+    mnom = multinomial(np.sum(true_counts), probs)
+    return -(mnom.logpmf(true_counts) / len(true_counts))
+    
+def profile_cross_entropy(true_counts, logits=None, probs=None):
+    """
+        Compute the cross entropy between true counts and predicted 
+        values of a BPNet-like profile model
+        
+        One of `logits` or `probs` must be given. If both are
+        given `logits` takes preference.
+
+        Args:
+            true_counts (numpy.array): observed counts values
+            
+            logits (numpy.array): predicted logits values
+            
+            probs (numpy.array): predicted values as probabilities
+          
+        Returns:
+            float: cross entropy
+    
+    """
+
+    if logits is not None:
+        
+        # check for length mismatch
+        if len(logits) != len(true_counts):
+            raise quietexception.QuietException(
+                "Length of logits does not match length of true_counts")
+        
+        # convert logits to softmax probabilities
+        probs = logits - logsumexp(logits)
+        probs = np.exp(probs)
+        
+    elif probs is not None:      
+        
+        # check for length mistmatch
+        if len(probs) != len(true_counts):
+            raise quietexception.QuietException(
+                "Length of probs does not match length of true_counts")
+        
+        # check if probs sums to 1
+        if abs(1.0 - np.sum(probs)) > 1e-3:
+            raise quietexception.QuietException(
+                "'probs' array does not sum to 1")        
+    else:
+        
+        # both 'probs' and 'logits' are None
+        raise quietexception.QuietException(
+            "At least one of probs or logits must be provided. "
+            "Both are None.")
+        
+    # convert true_counts to probabilities
+    true_counts_prob = true_counts / np.sum(true_counts)
+    
+    return np.sum(np.multiply(true_counts_prob, np.log(probs + 1e-7)))
+
+
+def get_min_max_normalized_value(val, minimum, maximum):
+    
+    ret_val = (val - minimum) / (maximum - minimum)
+    
+    if ret_val < 0:
+        return 0
+    
+    if ret_val > 1:
+        return 1
+    
+    return ret_val
 
 
 def metrics_main():
@@ -24,11 +148,40 @@ def metrics_main():
 
     # check if the output directory exists
     if not os.path.exists(args.output_dir):
-        logging.error("Directory {} does not exist".format(
-            args.output_dir))
+        raise quietexception.QuietException(
+            "Directory {} does not exist".format(args.output_dir))
+    
+    # check if the peaks file exists
+    if args.peaks is not None and not os.path.exists(args.peaks):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.peaks))
+            
+    # check if the bounds file exists
+    if not os.path.exists(args.bounds_csv):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.bounds_csv))
         
-        return
+    # check if profile A exists
+    if not os.path.exists(args.profileA):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.profileA))
+    
+    # check if profile B exists
+    if not os.path.exists(args.profileB):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.profileB))
 
+    # check if counts A exists
+    if args.countsA is not None and not os.path.exists(args.countsA):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.countsA))
+    
+    # check if counts B exists
+    if args.countsB is not None and not os.path.exists(args.countsB):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.countsB))
+
+    # check if we need to auto generate the output directory
     if args.automate_filenames:
         # create a new directory using current date/time to store the
         # metrics outputs & logs 
@@ -38,8 +191,8 @@ def metrics_main():
     elif os.path.isdir(args.output_dir):
         metrics_dir = args.output_dir        
     else:
-        logging.error("Directory does not exist {}.".format(args.output_dir))
-        return
+        raise quietexception.QuietException(
+            "{} is not a directory".format(args.output_dir))
 
     # filename to write debug logs
     logfname = "{}/metrics.log".format(metrics_dir)
@@ -47,6 +200,10 @@ def metrics_main():
     # set up the loggers
     init_logger(logfname)
 
+    # read the bounds csv into a pandas DataFrame
+    bounds_df = pd.read_csv(args.bounds_csv, header=0)
+
+    # check if peaks file has been supplied
     if args.peaks is not None:
         peaks_df = pd.read_csv(args.peaks, 
                                sep='\t', header=None, 
@@ -68,15 +225,12 @@ def metrics_main():
         peaks_df['end_pos'] = peaks_df['summit_pos'] + \
                                     args.metrics_seq_len // 2
 
-        # sort based on chromosome number and right flank coordinate
-        peaks_df = peaks_df.sort_values(['chrom', 'summit_pos']).reset_index(
-            drop=True)
-
         # select only the chrom & summit positon columns
         allPositions = peaks_df[['chrom', 'start_pos', 'end_pos']]
 
         allPositions = allPositions.reset_index(drop=True)
-        
+     
+    # else generate geome wide positions
     else:
         
         allPositions = getChromPositions(args.chroms, args.chrom_sizes, 
@@ -84,9 +238,16 @@ def metrics_main():
                                          args.step_size, mode='sequential',
                                          num_positions=-1)
             
-    print(allPositions.shape)
+    print(allPositions.shape, bounds_df.shape)
    
-   # open the two bigWig files
+    # check that there are exactly the same number of rows in the 
+    # bounds dataframe as compared to allPositions
+    if bounds_df.shape[0] != allPositions.shape[0]:
+        raise quietexception.QuietException(
+            "Bounds row count does not match chrom positions row "
+            "count".format(args.peaks)) 
+     
+    # open the two bigWig files
     try:
         bigWigProfileA = pyBigWig.open(args.profileA)
         bigWigProfileB = pyBigWig.open(args.profileB)
@@ -107,16 +268,35 @@ def metrics_main():
     
     # initialize arrays to hold metrics values
     array_len = len(allPositions.index)
+    multinomial_nll = np.zeros(array_len, dtype=np.float64)
+    ce = np.zeros(array_len, dtype=np.float64)
+    jsd = np.zeros(array_len, dtype=np.float64)
     pearson = np.zeros(array_len, dtype=np.float64)
     spearman = np.zeros(array_len, dtype=np.float64)
-    jsd = np.zeros(array_len, dtype=np.float64)
     mse = np.zeros(array_len, dtype=np.float64)
     
-    idx = 0
-    for chrom, start, end in allPositions.itertuples(index=False, name=None):
-        profileA = np.nan_to_num(np.array(bigWigProfileA.values(chrom, start, end)))
-        profileB = np.nan_to_num(np.array(bigWigProfileB.values(chrom, start, end)))
-
+    for idx, row in tqdm(allPositions.iterrows(), total=allPositions.shape[0]):
+        
+        chrom = row['chrom']
+        start = row['start_pos']
+        end = row['end_pos']
+        
+        # get all the bounds values
+        mnll_min = bounds_df.loc[idx, 'mnll_self']
+        mnll_max = bounds_df.loc[idx, 'mnll_uniform']
+        ce_min = bounds_df.loc[idx, 'ce_self']
+        ce_max = bounds_df.loc[idx, 'ce_uniform']
+        jsd_min = bounds_df.loc[idx, 'jsd_self']
+        jsd_max = bounds_df.loc[idx, 'jsd_uniform']
+        
+         
+        try:
+            profileA = np.nan_to_num(np.array(bigWigProfileA.values(chrom, start, end)))
+            profileB = np.nan_to_num(np.array(bigWigProfileB.values(chrom, start, end)))
+        except Exception as e:
+            raise quietexception.QuietException(
+                "Error retrieving values {}, {}, {}".format(chrom, start, end))
+            
         if args.countsA:
             # since every base is assigned the total counts in the 
             # region we have to take the mean
@@ -233,14 +413,25 @@ def metrics_main():
         # If true then pearson correlation is undefined 
         if np.unique(probProfileA).size == 1 or \
             np.unique(probProfileB).size == 1:
-            pearson[idx] = np.nan
-            spearman[idx] = np.nan
+            pearson[idx] = 0
+            spearman[idx] = 0
         else:
-            pearson[idx] = pearsonr(probProfileA, probProfileB)[0]
+            pearson[idx] = pearsonr(valsProfileA, valsProfileB)[0]
             spearman[idx] = spearmanr(valsProfileA, valsProfileB)[0]
 
+        multinomial_nll[idx] = mnll(valsProfileA, probs=probProfileB)
+        #print(multinomial_nll[idx], mnll_min, mnll_max)
+        multinomial_nll[idx] = get_min_max_normalized_value(
+            multinomial_nll[idx], mnll_min, mnll_max)
+        
+        # cross entropy
+        ce[idx] = profile_cross_entropy(valsProfileA, probs=probProfileB)
+        #print(ce[idx], ce_min, ce_max)
+        ce[idx] = get_min_max_normalized_value(ce[idx], ce_min, ce_max)
+        
         # jsd
         jsd[idx] = jensenshannon(probProfileA, probProfileB)
+        jsd[idx] = get_min_max_normalized_value(jsd[idx], jsd_min, jsd_max)
 
         # mse
         mse[idx] = np.square(np.subtract(valsProfileA, valsProfileB)).mean()
@@ -248,19 +439,23 @@ def metrics_main():
         # add to the counts list
         countsA.append(np.sum(valsProfileA))
         countsB.append(np.sum(valsProfileB))
-        idx += 1
 
+            
     counts_pearson = pearsonr(countsA, countsB)[0]
     counts_spearman = spearmanr(countsA, countsB)[0]
     
     print("\t\t", "median", "\t\t", "max", "\t\t", "min")
+    print("mnll", np.median(multinomial_nll), max(multinomial_nll), min(multinomial_nll))
+    print("ce", np.median(ce), max(ce), min(ce))
+    print("jsd", np.median(jsd), max(jsd), min(jsd))
     print("pearson", np.median(pearson), max(pearson), min(pearson)) 
     print("spearman", np.median(spearman), max(spearman), min(spearman))
-    print("jsd", np.median(jsd), max(jsd), min(jsd))
     print("mse", np.median(mse), max(mse), min(mse))
     print("counts pearson", counts_pearson)
     print("counts spearman", counts_spearman)
 
+    np.savez_compressed('{}/mnll'.format(metrics_dir), mnll=multinomial_nll)
+    np.savez_compressed('{}/cross_entropy'.format(metrics_dir), cross_entropy=ce)
     np.savez_compressed('{}/mse'.format(metrics_dir), mse=mse)
     np.savez_compressed('{}/pearson'.format(metrics_dir), pearson=pearson)
     np.savez_compressed('{}/spearman'.format(metrics_dir), spearman=spearman)
