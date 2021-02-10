@@ -400,7 +400,7 @@ def bounds_main():
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
         raise quietexception.QuietException(
-            "Directory {} does not exist".format(args.output_dir))
+            "Directory {} does not exist".format(args.output_directory))
 
     # check to make sure at least one input profile was provided
     if len(args.input_profiles) == 0:
