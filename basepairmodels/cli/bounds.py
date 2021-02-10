@@ -38,6 +38,7 @@ import pyBigWig
 import sys
 
 from basepairmodels.cli.argparsers import bounds_argsparser
+from basepairmodels.cli.metrics import mnll, profile_cross_entropy
 
 from mseqgen import quietexception
 
@@ -47,119 +48,9 @@ from scipy.special import logsumexp
 from scipy.stats import pearsonr, spearmanr, multinomial
 
 from tqdm import tqdm
-
-def mnll(true_counts, logits=None, probs=None):
-    """
-        Compute the multinomial negative log-likelihood between true
-        counts and predicted values of a BPNet-like profile model
-        
-        One of `logits` or `probs` must be given. If both are
-        given `logits` takes preference.
-
-        Args:
-            true_counts (numpy.array): observed counts values
-            
-            logits (numpy.array): predicted logits values
-            
-            probs (numpy.array): predicted values as probabilities
-          
-        Returns:
-            float: cross entropy
-    
-    """
-
-    dist = None 
-    
-    if logits is not None:
-        
-        # check for length mismatch
-        if len(logits) != len(true_counts):
-            raise quietexception.QuietException(
-                "Length of logits does not match length of true_counts")
-        
-        # convert logits to softmax probabilities
-        probs = logits - logsumexp(logits)
-        probs = np.exp(probs)
-        
-    elif probs is not None:      
-        
-        # check for length mistmatch
-        if len(probs) != len(true_counts):
-            raise quietexception.QuietException(
-                "Length of probs does not match length of true_counts")
-        
-        # check if probs sums to 1
-        if abs(1.0 - np.sum(probs)) > 1e-3:
-            raise quietexception.QuietException(
-                "'probs' array does not sum to 1")   
-           
-    else:
-        
-        # both 'probs' and 'logits' are None
-        raise quietexception.QuietException(
-            "At least one of probs or logits must be provided. "
-            "Both are None.")
-  
-    # compute the nmultinomial distribution
-    mnom = multinomial(np.sum(true_counts), probs)
-    return -(mnom.logpmf(true_counts) / len(true_counts))
-    
-def profile_cross_entropy(true_counts, logits=None, probs=None):
-    """
-        Compute the cross entropy between true counts and predicted 
-        values of a BPNet-like profile model
-        
-        One of `logits` or `probs` must be given. If both are
-        given `logits` takes preference.
-
-        Args:
-            true_counts (numpy.array): observed counts values
-            
-            logits (numpy.array): predicted logits values
-            
-            probs (numpy.array): predicted values as probabilities
-          
-        Returns:
-            float: cross entropy
-    
-    """
-
-    if logits is not None:
-        
-        # check for length mismatch
-        if len(logits) != len(true_counts):
-            raise quietexception.QuietException(
-                "Length of logits does not match length of true_counts")
-        
-        # convert logits to softmax probabilities
-        probs = logits - logsumexp(logits)
-        probs = np.exp(probs)
-        
-    elif probs is not None:      
-        
-        # check for length mistmatch
-        if len(probs) != len(true_counts):
-            raise quietexception.QuietException(
-                "Length of probs does not match length of true_counts")
-        
-        # check if probs sums to 1
-        if abs(1.0 - np.sum(probs)) > 1e-3:
-            raise quietexception.QuietException(
-                "'probs' array does not sum to 1")        
-    else:
-        
-        # both 'probs' and 'logits' are None
-        raise quietexception.QuietException(
-            "At least one of probs or logits must be provided. "
-            "Both are None.")
-        
-    # convert true_counts to probabilities
-    true_counts_prob = true_counts / np.sum(true_counts)
-    
-    return np.sum(np.multiply(true_counts_prob, np.log(probs + 1e-7)))
         
 
-def average_profile(input_bigWig, peaks_df, peak_width):
+def get_average_profile(input_bigWig, peaks_df, peak_width):
     """
         Function to compute the average profile across all peaks
         
@@ -315,14 +206,14 @@ def bounds(input_bigWig, peaks_df, peak_width, smoothing_params=[7, 81]):
                 profiles
         
         Returns:
-            pandas.DataFrame: pandas dataframe with bounds values in
-                columns
+            tuple: (numpy array of average profile, pandas dataframe
+                with bounds values in columns)
                 
     """
     
     # compute the average profile
     print("Computing average profile ...")
-    avg_profile = average_profile(input_bigWig, peaks_df, peak_width)
+    avg_profile = get_average_profile(input_bigWig, peaks_df, peak_width)
     
     # get average profile as probabilities
     avg_profile_prob = avg_profile / np.sum(avg_profile)
@@ -474,26 +365,27 @@ def bounds(input_bigWig, peaks_df, peak_width, smoothing_params=[7, 81]):
                     'pearson_uniform', 'pearson_average', 'pearson_self', 
                     'spearman_uniform', 'spearman_average', 'spearman_self']
     
-    df = pd.DataFrame(columns = column_names)
+    # create a pandas dataframe to store all the bounds values
+    bounds_df = pd.DataFrame(columns = column_names)
         
     # assign values to the dataframe columns
-    df['mnll_uniform'] = np.nan_to_num(mnll_uniform)
-    df['mnll_average'] = np.nan_to_num(mnll_average)
-    df['mnll_self'] = np.nan_to_num(mnll_self)
-    df['ce_uniform'] = np.nan_to_num(ce_uniform)
-    df['ce_average'] = np.nan_to_num(ce_average)
-    df['ce_self'] = np.nan_to_num(ce_self)
-    df['jsd_uniform'] = np.nan_to_num(jsd_uniform)
-    df['jsd_average'] = np.nan_to_num(jsd_average)
-    df['jsd_self'] = np.nan_to_num(jsd_self)
-    df['pearson_uniform'] = np.nan_to_num(pearson_uniform)
-    df['pearson_average'] = np.nan_to_num(pearson_average)
-    df['pearson_self'] = np.nan_to_num(pearson_self)
-    df['spearman_uniform'] = np.nan_to_num(spearman_uniform)
-    df['spearman_average'] = np.nan_to_num(spearman_average)
-    df['spearman_self'] = np.nan_to_num(spearman_self)
+    bounds_df['mnll_uniform'] = np.nan_to_num(mnll_uniform)
+    bounds_df['mnll_average'] = np.nan_to_num(mnll_average)
+    bounds_df['mnll_self'] = np.nan_to_num(mnll_self)
+    bounds_df['ce_uniform'] = np.nan_to_num(ce_uniform)
+    bounds_df['ce_average'] = np.nan_to_num(ce_average)
+    bounds_df['ce_self'] = np.nan_to_num(ce_self)
+    bounds_df['jsd_uniform'] = np.nan_to_num(jsd_uniform)
+    bounds_df['jsd_average'] = np.nan_to_num(jsd_average)
+    bounds_df['jsd_self'] = np.nan_to_num(jsd_self)
+    bounds_df['pearson_uniform'] = np.nan_to_num(pearson_uniform)
+    bounds_df['pearson_average'] = np.nan_to_num(pearson_average)
+    bounds_df['pearson_self'] = np.nan_to_num(pearson_self)
+    bounds_df['spearman_uniform'] = np.nan_to_num(spearman_uniform)
+    bounds_df['spearman_average'] = np.nan_to_num(spearman_average)
+    bounds_df['spearman_self'] = np.nan_to_num(spearman_self)
 
-    return df
+    return avg_profile, bounds_df
 
 
 def bounds_main():
@@ -561,16 +453,28 @@ def bounds_main():
         print("Processing ... ", input_profile_bigWig)
         
         # compute upper & lower bounds, and avg profile performance
-        df = bounds(input_profile_bigWig, peaks_df, args.peak_width,
-                    args.smoothing_params)
+        average_profile, bounds_df = bounds(
+            input_profile_bigWig, peaks_df, args.peak_width, 
+            args.smoothing_params)
 
+        # path to output average profile file
+        average_profile_filename = "{}/{}_average_profile.csv".format(
+            args.output_directory, args.output_names[i])
+        
+        # write average profile to csv file
+        print("Saving average profile ...")
+        print(average_profile)
+        np.savetxt(average_profile_filename, average_profile,
+                   delimiter=",")
+        
         # path to the output bounds file
         output_fname = "{}/{}.bds".format(args.output_directory, 
                                           args.output_names[i])
         
         # write the dataframe to a csv file
-        df.to_csv(output_fname, index=False)
-    
+        print("Saving bounds file ...")
+        bounds_df.to_csv(output_fname, index=False)
+
 
 if __name__ == '__main__':
     bounds_main()
