@@ -125,7 +125,7 @@ def profile_cross_entropy(true_counts, logits=None, probs=None):
     # convert true_counts to probabilities
     true_counts_prob = true_counts / np.sum(true_counts)
     
-    return np.sum(np.multiply(true_counts_prob, np.log(probs + 1e-7)))
+    return -np.sum(np.multiply(true_counts_prob, np.log(probs + 1e-7)))
 
 
 def get_min_max_normalized_value(val, minimum, maximum):
@@ -157,7 +157,7 @@ def metrics_main():
             "File {} does not exist".format(args.peaks))
             
     # check if the bounds file exists
-    if not os.path.exists(args.bounds_csv):
+    if args.bounds_csv is not None and not os.path.exists(args.bounds_csv):
         raise quietexception.QuietException(
             "File {} does not exist".format(args.bounds_csv))
         
@@ -201,8 +201,12 @@ def metrics_main():
     init_logger(logfname)
 
     # read the bounds csv into a pandas DataFrame
-    bounds_df = pd.read_csv(args.bounds_csv, header=0)
-
+    if args.bounds_csv is not None:
+        logging.info("Loading lower and upper bounds ...")
+        bounds_df = pd.read_csv(args.bounds_csv, header=0)
+    else:
+        bounds_df = None
+    
     # check if peaks file has been supplied
     if args.peaks is not None:
         peaks_df = pd.read_csv(args.peaks, 
@@ -237,12 +241,10 @@ def metrics_main():
                                          args.metrics_seq_len // 2, 
                                          args.step_size, mode='sequential',
                                          num_positions=-1)
-            
-    print(allPositions.shape, bounds_df.shape)
-   
+               
     # check that there are exactly the same number of rows in the 
     # bounds dataframe as compared to allPositions
-    if bounds_df.shape[0] != allPositions.shape[0]:
+    if bounds_df is not None and (bounds_df.shape[0] != allPositions.shape[0]):
         raise quietexception.QuietException(
             "Bounds row count does not match chrom positions row "
             "count".format(args.peaks)) 
@@ -282,17 +284,22 @@ def metrics_main():
         end = row['end_pos']
         
         # get all the bounds values
-        mnll_min = bounds_df.loc[idx, 'mnll_self']
-        mnll_max = bounds_df.loc[idx, 'mnll_uniform']
-        ce_min = bounds_df.loc[idx, 'ce_self']
-        ce_max = bounds_df.loc[idx, 'ce_uniform']
-        jsd_min = bounds_df.loc[idx, 'jsd_self']
-        jsd_max = bounds_df.loc[idx, 'jsd_uniform']
-        
-         
+        if bounds_df is not None:
+            mnll_min = bounds_df.loc[idx, 'mnll_self']
+            mnll_max = bounds_df.loc[idx, 'mnll_uniform']
+            ce_min = bounds_df.loc[idx, 'ce_self']
+            ce_max = bounds_df.loc[idx, 'ce_uniform']
+            jsd_min = bounds_df.loc[idx, 'jsd_self']
+            jsd_max = bounds_df.loc[idx, 'jsd_uniform']
+            pearson_min = bounds_df.loc[idx, 'pearson_uniform']
+            pearson_max = bounds_df.loc[idx, 'pearson_self']
+            spearman_min = bounds_df.loc[idx, 'spearman_uniform']
+            spearman_max = bounds_df.loc[idx, 'spearman_self']
         try:
-            profileA = np.nan_to_num(np.array(bigWigProfileA.values(chrom, start, end)))
-            profileB = np.nan_to_num(np.array(bigWigProfileB.values(chrom, start, end)))
+            profileA = np.nan_to_num(np.array(
+                bigWigProfileA.values(chrom, start, end)))
+            profileB = np.nan_to_num(np.array(
+                bigWigProfileB.values(chrom, start, end)))
         except Exception as e:
             raise quietexception.QuietException(
                 "Error retrieving values {}, {}, {}".format(chrom, start, end))
@@ -300,14 +307,16 @@ def metrics_main():
         if args.countsA:
             # since every base is assigned the total counts in the 
             # region we have to take the mean
-            valsCountsA = np.mean(np.nan_to_num(np.array(bigWigCountsA.values(chrom, start, end))))
+            valsCountsA = np.mean(np.nan_to_num(
+                np.array(bigWigCountsA.values(chrom, start, end))))
         else:
             valsCountsA = np.sum(profileA)
 
         if args.countsB:
             # since every base is assigned the total counts in the 
             # region we have to take the mean
-            valsCountsB = np.mean(np.nan_to_num(np.array(bigWigCountsB.values(chrom, start, end))))
+            valsCountsB = np.mean(np.nan_to_num(
+                np.array(bigWigCountsB.values(chrom, start, end))))
         else:
             valsCountsB = np.sum(profileB)
             
@@ -419,19 +428,23 @@ def metrics_main():
             pearson[idx] = pearsonr(valsProfileA, valsProfileB)[0]
             spearman[idx] = spearmanr(valsProfileA, valsProfileB)[0]
 
+        # mnll
         multinomial_nll[idx] = mnll(valsProfileA, probs=probProfileB)
-        #print(multinomial_nll[idx], mnll_min, mnll_max)
-        multinomial_nll[idx] = get_min_max_normalized_value(
-            multinomial_nll[idx], mnll_min, mnll_max)
-        
         # cross entropy
         ce[idx] = profile_cross_entropy(valsProfileA, probs=probProfileB)
-        #print(ce[idx], ce_min, ce_max)
-        ce[idx] = get_min_max_normalized_value(ce[idx], ce_min, ce_max)
-        
         # jsd
         jsd[idx] = jensenshannon(probProfileA, probProfileB)
-        jsd[idx] = get_min_max_normalized_value(jsd[idx], jsd_min, jsd_max)
+ 
+        # apply min max normlization
+        if bounds_df is not None:
+            multinomial_nll[idx] = get_min_max_normalized_value(
+                multinomial_nll[idx], mnll_min, mnll_max)
+            ce[idx] = get_min_max_normalized_value(ce[idx], ce_min, ce_max)
+            jsd[idx] = get_min_max_normalized_value(jsd[idx], jsd_min, jsd_max)
+            pearson[idx] = get_min_max_normalized_value(
+                pearson[idx], pearson_min, pearson_max)
+            spearman[idx] = get_min_max_normalized_value(
+                spearman[idx], spearman_min, spearman_max)
 
         # mse
         mse[idx] = np.square(np.subtract(valsProfileA, valsProfileB)).mean()
@@ -444,18 +457,27 @@ def metrics_main():
     counts_pearson = pearsonr(countsA, countsB)[0]
     counts_spearman = spearmanr(countsA, countsB)[0]
     
-    print("\t\t", "median", "\t\t", "max", "\t\t", "min")
-    print("mnll", np.median(multinomial_nll), max(multinomial_nll), min(multinomial_nll))
-    print("ce", np.median(ce), max(ce), min(ce))
-    print("jsd", np.median(jsd), max(jsd), min(jsd))
-    print("pearson", np.median(pearson), max(pearson), min(pearson)) 
-    print("spearman", np.median(spearman), max(spearman), min(spearman))
-    print("mse", np.median(mse), max(mse), min(mse))
-    print("counts pearson", counts_pearson)
-    print("counts spearman", counts_spearman)
+    logging.info("\t\tmin\t\tmax\t\tmedian")
+    logging.info("mnll\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(multinomial_nll), np.max(multinomial_nll), 
+        np.median(multinomial_nll)))
+    logging.info("cross_entropy\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(ce), np.max(ce), np.median(ce)))
+    logging.info("jsd\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(jsd), np.max(jsd), np.median(jsd)))
+    logging.info("pearson\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+       np. min(pearson), np.max(pearson), np.median(pearson)))
+    logging.info("spearman\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(spearman), np.max(spearman), np.median(spearman)))
+    logging.info("mse\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(mse), np.max(mse), np.median(mse)))
+    logging.info("==============================================")
+    logging.info("counts pearson: {}".format(counts_pearson))
+    logging.info("counts spearman: {}".format(counts_spearman))
 
     np.savez_compressed('{}/mnll'.format(metrics_dir), mnll=multinomial_nll)
-    np.savez_compressed('{}/cross_entropy'.format(metrics_dir), cross_entropy=ce)
+    np.savez_compressed('{}/cross_entropy'.format(metrics_dir), 
+                        cross_entropy=ce)
     np.savez_compressed('{}/mse'.format(metrics_dir), mse=mse)
     np.savez_compressed('{}/pearson'.format(metrics_dir), pearson=pearson)
     np.savez_compressed('{}/spearman'.format(metrics_dir), spearman=spearman)
