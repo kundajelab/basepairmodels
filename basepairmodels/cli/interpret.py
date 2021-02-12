@@ -19,7 +19,8 @@ from basepairmodels.cli.shaputils import *
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 
-from scipy.ndimage import gaussian_filter1d
+from mseqgen import quietexception
+from mseqgen.utils import gaussian1D_smoothing
 
 def interpret(args, interpret_dir):
     # load the model
@@ -28,101 +29,125 @@ def interpret(args, interpret_dir):
     # read all the peaks into a pandas dataframe
     peaks_df = pd.read_csv(args.bed_file, sep='\t', header=None, 
                            names=['chrom', 'st', 'end', 'name', 'score',
-                                  'strand', 'signal', 'p', 'q', 'summit'])
+                                  'strand', 'signalValue', 'p', 'q', 'summit'])
 
-    if len(args.chroms) > 0:
+    if args.chroms is not None:
         # keep only those rows corresponding to the required 
         # chromosomes
         peaks_df = peaks_df[peaks_df['chrom'].isin(args.chroms)]
            
     if args.sample is not None:
         # randomly sample rows
-        print("sampling {} rows".format(args.sample))
-        peaks_df = peaks_df.sample(args.sample)
+        logging.info("Sampling {} rows from {}".format(
+            args.sample, args.bed_file))
+        peaks_df = peaks_df.sample(n=args.sample, random_state=args.seed)
     
     if args.presort_bed_file:
         # sort the bed file in descending order of peak strength
-        peaks_df = peaks_df.sort_values(['signal'], 
-                                        ascending=False).reset_index(drop=True)
-        
-    # reference file to fetch sequences
-    fasta_ref = pysam.FastaFile(args.reference_genome)
-
-    # if controls have been specified
-    if args.controls is not None:
-        # log of sum of counts of the control track, (sum of control
-        # tracks in case of stranded)
-        bias_counts_input = np.zeros((peaks_df.shape[0], 1))
-
-        # the control track (sum of control tracks in case of stranded)
-        # and the smooted versions of the control track
-        bias_profile_input = np.zeros((peaks_df.shape[0], args.control_len, 
-                                      len(args.control_smoothing)))
+        peaks_df = peaks_df.sort_values(['signalValue'], ascending=False)
     
-
-        control_bigwigs = []
+    # reset index (if any of the above 3 filters have been applied, 
+    # no harm if they haven't)
+    peaks_df = peaks_df.reset_index(drop=True)
+    
+    # get final number of peaks
+    num_peaks = peaks_df.shape[0]
+    
+    # reference file to fetch sequences
+    logging.info("Opening reference file ...")
+    fasta_ref = pysam.FastaFile(args.reference_genome)
+        
+    # if controls have been specified we to need open the control files
+    # for reading
+    if args.control_bigWigs is not None:
+        control_bigWigs = []
+        
         # open the control bigwig files for reading
-        print("opening control bigwigs")
-        for control_file in args.controls:
-            control_bigwigs.append(pyBigWig.open(control_file))
+        logging.info("Opening control bigWigs ...")
+        for control_file in args.control_bigWigs:
+            control_bigWigs.append(pyBigWig.open(control_file))
 
-    # get all the sequences for the peaks
+    # log of sum of counts of the control track
+    # if multiple control files are specified this would be
+    # log(sum(position_wise_sum_from_all_files))
+    bias_counts_input = np.zeros((num_peaks, 1))
+
+    # the control profile and the smoothed version of the control 
+    # profile (1 + 1 = 2, always :) )
+    # if multiple control files are specified, the control profile for
+    # each sample would be position_wise_sum_from_all_files
+    bias_profile_input = np.zeros((num_peaks, args.control_len, 2))
+    
+    ## IF NO CONTROL BIGWIGS ARE SPECIFIED THEN THE TWO NUMPY ARRAYS
+    ## bias_counts_input AND bias_profile_input WILL REMAIN ZEROS
+    
+    # list to hold all the sequences for the peaks
     sequences = []
     
     # get a list of valid rows to store only the peaks on which 
     # the contribution scores are computed, excluding those that
     # have may some exceptions, later we'll convert these rows
-    # to a dataframe and write to a new file
+    # to a dataframe and write it out to a new file
     rows = []
     
-    rowidx = 0
+    # iterate through all the peaks
     for idx, row in peaks_df.iterrows():
         
-        # fetch sequence
+        # peak interval based on 'summit' position
         start = row['st'] + row['summit'] - (args.input_seq_len // 2)
-        end =  row['st'] + row['summit'] + (args.input_seq_len // 2)
+        end = row['st'] + row['summit'] + (args.input_seq_len // 2)
         
+        # fetch the reference sequence at the peak location
         try:
             seq = fasta_ref.fetch(row['chrom'], start, end).upper()        
         except ValueError: # start/end out of range
+            logging.warn("Unable to fetch reference sequence at peak: "
+                         "{} {}-{}. Skipped.".format(row['chrom'], start, end))
             continue
-        
-        # row passes exception handling
-        rows.append(dict(row))
             
+        # check if we have the required length
         if len(seq) != args.input_seq_len:
             logging.warn("Reference genome doesn't have required sequence " 
                          "length ({}) at peak: {} {}-{}. Returned length {}. "
                          "Skipped.".format(args.input_seq_len, row['chrom'], 
                                            start, end, len(seq)))
             continue        
-        sequences.append(seq)
         
         # fetch control values
-        if args.controls is not None:
+        if args.control_bigWigs is not None:
+            # a different start and end for controls since control_len
+            # is usually not the same as input_seq_len
             start = row['st'] + row['summit'] - (args.control_len // 2)
             end =  row['st'] + row['summit'] + (args.control_len // 2)
-            for i in range(len(control_bigwigs)):
-                vals = control_bigwigs[i].values(row['chrom'], start, end)
-                bias_counts_input[rowidx, 0] += np.sum(vals)
-                bias_profile_input[rowidx, :, 0] += vals
 
-            # compute the smoothed control values
-            for i in range(len(args.control_smoothing)):
-                unsmoothed_controls = np.copy(bias_profile_input[rowidx, :, 0])
-                if  args.control_smoothing[i] > 1:
-                    bias_profile_input[rowidx, :, i] = gaussian_filter1d(
-                        unsmoothed_controls, args.control_smoothing[i])
+            # read the values from the control bigWigs
+            for i in range(len(control_bigWigs)):
+                vals = np.nan_to_num(
+                    control_bigWigs[i].values(row['chrom'], start, end))
+                bias_counts_input[idx, 0] += np.sum(vals)
+                bias_profile_input[idx, :, 0] += vals
             
-        rowidx += 1
+            # we need to take the log of the sum of counts
+            # we add 1 to avoid taking log of 0
+            # same as mseqgen does while generating batches
+            bias_counts_input[idx, 0] = np.log(bias_counts_input[idx, 0] + 1)
+                         
+            # compute the smoothed control profile
+            sigma = float(args.control_smoothing[0])
+            window_width = int(args.control_smoothing[1])
+            bias_profile_input[idx, :, 1] = gaussian1D_smoothing(
+                bias_profile_input[idx, :, 0], sigma, window_width)
+
+        sequences.append(seq)
+
+        # row passes all exception handling
+        rows.append(dict(row))
 
     # one hot encode all the sequences
     X = one_hot_encode(sequences)
     print(X.shape)
         
-    weightedsum_meannormed_logits = get_weightedsum_meannormed_logits(
-        model, task_id=args.task_id, stranded=True)
-
+    # inline function to handle dinucleotide shuffling
     def data_func(model_inputs):
         rng = np.random.RandomState(args.seed)
         return [dinuc_shuffle(model_inputs[0], args.num_shuffles, rng)] + \
@@ -133,12 +158,16 @@ def interpret(args, interpret_dir):
             ) for i in range(1, len(model_inputs))
         ]
     
+    # shap explainer for the counts head
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
         ([model.input[0], model.input[1]], 
          tf.reduce_sum(model.outputs[1], axis=-1)),
         data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
 
+    # explainer for the profile head
+    weightedsum_meannormed_logits = get_weightedsum_meannormed_logits(
+        model, task_id=args.task_id, stranded=True)
     profile_model_profile_explainer = shap.explainers.deep.TFDeepExplainer(
         ([model.input[0], model.input[2]], weightedsum_meannormed_logits),
         data_func, 
@@ -146,7 +175,7 @@ def interpret(args, interpret_dir):
 
     logging.info("Generating 'counts' shap scores")
     counts_shap_scores = profile_model_counts_explainer.shap_values(
-        [X, np.zeros((X.shape[0], 1))], progress_message=100)
+        [X, bias_counts_input], progress_message=100)
     
     # construct a dictionary for the 'counts' shap scores & the
     # the projected 'counts' shap scores
@@ -164,7 +193,7 @@ def interpret(args, interpret_dir):
     
     logging.info("Generating 'profile' shap scores")
     profile_shap_scores = profile_model_profile_explainer.shap_values(
-        [X, np.zeros((X.shape[0], args.control_len, 2))], progress_message=100)
+        [X, bias_profile_input], progress_message=100)
           
     # construct a dictionary for the 'profile' shap scores & the
     # the projected 'profile' shap scores
@@ -199,22 +228,52 @@ def interpret_main():
     args = parser.parse_args()
     
     # check if the output directory exists
-    if not os.path.exists(args.output_dir):
-        logging.error("Directory {} does not exist".format(
-            args.output_dir))
-        return
+    if not os.path.exists(args.output_directory):
+        raise quietexception.QuietException(
+            "Directory {} does not exist".format(args.output_directory))
 
+    # check if the output directory is a directory path
+    if not os.path.isdir(args.output_directory):
+        raise quietexception.QuietException(
+            "{} is not a directory".format(args.output_directory))
+    
+    # check if the reference genome file exists
+    if not os.path.exists(args.reference_genome):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.reference_genome))
+
+    # check if the model file exists
+    if not os.path.exists(args.model):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.model))
+
+    # check if the bed file exists
+    if not os.path.exists(args.bed_file):
+        raise quietexception.QuietException(
+            "File {} does not exist".format(args.bed_file))
+    
+    # if controls are specified check if each of the control files
+    # exist
+    if args.control_bigWigs is not None:
+        for fname in args.control_bigWigs:
+            if not os.path.exists(fname):
+                raise quietexception.QuietException(
+                    "File {} does not exist".format(args.bed_file))
+        
+    # check if both args.chroms and args.sample are specified, only
+    # one of the two is allowed
+    if args.chroms is not None and args.sample is not None:
+        raise quietexception.QuietException(
+            "Only one of [--chroms, --sample]  is allowed")
+            
     if args.automate_filenames:
         # create a new directory using current date/time to store the
         # interpretation scores
         date_time_str = local_datetime_str(args.time_zone)
-        interpret_dir = '{}/{}'.format(args.output_dir, date_time_str)
+        interpret_dir = '{}/{}'.format(args.output_directory, date_time_str)
         os.mkdir(interpret_dir)
-    elif os.path.isdir(args.output_dir):
-        interpret_dir = args.output_dir        
     else:
-        logging.error("Directory does not exist {}.".format(args.output_dir))
-        return
+        interpret_dir = args.output_directory    
 
     # filename to write debug logs
     logfname = "{}/interpret.log".format(interpret_dir)
@@ -228,6 +287,6 @@ def interpret_main():
                             MultichannelMultinomialNLL}):
             
         interpret(args, interpret_dir)
-    
+
 if __name__ == '__main__':
     interpret_main()

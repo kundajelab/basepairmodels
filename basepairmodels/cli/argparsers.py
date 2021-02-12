@@ -334,81 +334,76 @@ def interpret_argsparser():
     
     parser = argparse.ArgumentParser()
     
+    #reference params
+    parser.add_argument('--reference-genome', '-g', type=str, required=True,
+                        help="path to the reference genome file")
+
     # input params
-    parser.add_argument('--input-seq-len', '-l', type=int, 
-                        help="the length of the input sequence to the model", 
-                        default=3088)
+    parser.add_argument('--input-seq-len', type=int, required=True,
+                        help="the length of the input sequence to the model")
     
-    parser.add_argument('--control-len', type=int, 
-                        help="the length of the control input to the model", 
-                        default=1000)
+    parser.add_argument('--control-len', type=int, required=True,
+                        help="the length of the control input to the model")
 
     parser.add_argument('--model', '-m', type=str, required=True,
                         help="the path to the model (.h5) file")
 
+    parser.add_argument('--task-id', '-t', type=int,
+                        help="In the multitask case the integer sequence "
+                        "number of the task for which the interpretation "
+                        "scores should be computed. For single task use 0.",
+                        default=0)
+    
     parser.add_argument('--bed-file', '-b', type=str, required=True,
                         help="the path to the bed file containing "
                         "postions at which the model should be interpreted")
 
-    parser.add_argument('--presort-bed-file', action='store_true', 
-                        help="specify if the --bed-file should be sorted, "
-                        "in descending order of strongest peaks, before "
-                        "processing")
-    
-    parser.add_argument('--sample', type=int,
+    parser.add_argument('--sample', '-s', type=int,
                         help="the number of samples to randomly sample from "
-                        "the bed file")
+                        "the bed file. Only one of --sample or --chroms can "
+                        "be used.")
 
-    parser.add_argument('--chroms', nargs='+',
-                        help="list of chroms on which the contribution score "
-                        "are to be computed. Empty list implies all "
-                        "chromosomes", default=[])
+    parser.add_argument('--chroms', '-c', nargs='+',
+                        help="list of chroms on which the contribution scores "
+                        "are to be computed. If not specified all chroms in "
+                        "--bed-file will be processed.")
 
-    parser.add_argument('--controls', '-c', nargs='+',
-                        help="list of paths to control bigWig files. If "
-                        "unstranded specify a single file path, if stranded "
-                        "then a plus & minus bigWig file, in that order, must "
-                        "be specified.")
+    parser.add_argument('--presort-bed-file', action='store_true', 
+                        help="specify if the --bed-file should be sorted in "
+                        "descending order of enrichment. It is assumed that "
+                        "the --bed-file has 'signalValue' in column 7 to use "
+                        "for sorting.")
+    
+    parser.add_argument('--control-bigWigs', nargs='+',
+                        help="list of paths to control bigWig files. If not "
+                        "specified the controls are initliazed with zeros.")
 
     parser.add_argument('--control-smoothing', nargs='+',
-                        help="list of smoothing values for control inputs to "
-                        "the model", default=[1, 50])
-    
-    parser.add_argument('--task-id', type=int,
-                        help="In the multitask case the integer sequence "
-                        "number of the task for which the interpretation "
-                        "scores should be computed, for single task use 0. ",
-                        default=0)
+                        help="sigma and window width for gaussian 1d "
+                        "smoothing of the control", default=[7.0, 81])
     
     parser.add_argument('--num-shuffles', type=int,
                         help="the number of dinucleotide shuffles to perform "
                         "on each input sequence", default=20)   
     
     parser.add_argument('--seed', type=int,
-                        help="seed to create a NumPy RandomState object, to "
-                        "use for performing shuffles", default=20201208)  
+                        help="seed to create a NumPy RandomState object used"
+                        "for performing shuffles", default=20201208)  
     
     # output params
-    parser.add_argument('--output-dir', '-o', type=str, required=True,
+    parser.add_argument('--output-directory', '-o', type=str, required=True,
                         help="destination directory to store the "
                         "interpretation scores")
     
     parser.add_argument('--automate-filenames', action='store_true', 
-                        help="specify if the interpret output should "
-                        "be stored in a timestamped subdirectory within "
-                        "--output-dir")
+                        help="specify if the interpret output should be stored"
+                        "in a timestamped subdirectory within --output-dir")
 
-    parser.add_argument('--time-zone', '-t', type=str,
+    parser.add_argument('--time-zone', type=str,
                         help="time zone to use for timestamping output "
                         "directories", default='US/Pacific')
     
-    parser.add_argument('--other-tags', nargs='+',
-                        help="list of additional tags to be added as "
-                        "suffix to the filenames", default=[])
-
-    #reference params
-    parser.add_argument('--reference-genome', '-g', type=str, required=True,
-                        help="path to the reference genome file", default=1)
+    
     return parser
 
 
