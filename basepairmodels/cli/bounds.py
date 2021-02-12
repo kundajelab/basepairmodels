@@ -427,19 +427,19 @@ def bounds_main():
             "Peaks file {} does not exist".format(args.peaks))
 
     # read the peaks bed file into a pandas dataframe
-    peaks_df = pd.read_csv(args.peaks, usecols=[0,1,2], 
-                           names=['chrom', 'start', 'end'], 
-                           header=None, sep='\t')    
+    peaks_df = pd.read_csv(args.peaks, sep='\t', header=None, 
+                           names=['chrom', 'st', 'en', 'name', 'score',
+                                  'strand', 'signalValue', 'p', 'q', 'summit'])
     
     # if --chroms paramter is provided filter the dataframe rows
     if args.chroms is not None:
         peaks_df = peaks_df[peaks_df['chrom'].isin(args.chroms)]
     
-    # modified start and end based on specified peak_width
-    peaks_df['start'] = peaks_df['start'] + \
-                         (peaks_df['end'] - peaks_df['start']) // 2 - \
-                         args.peak_width // 2 
-    peaks_df['end'] = peaks_df['start'] + args.peak_width
+    # modified start and end based on summit & specified peak_width
+    peaks_df['start'] = peaks_df['st'] + peaks_df['summit'] - \
+                            (args.peak_width // 2)
+    peaks_df['end'] = peaks_df['st'] + peaks_df['summit'] + \
+                            (args.peak_width // 2)
     
     # reset index in case rows have been filtered
     peaks_df = peaks_df.reset_index()
@@ -463,7 +463,6 @@ def bounds_main():
         
         # write average profile to csv file
         print("Saving average profile ...")
-        print(average_profile)
         np.savetxt(average_profile_filename, average_profile,
                    delimiter=",")
         
