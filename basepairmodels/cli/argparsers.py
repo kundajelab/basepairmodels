@@ -386,6 +386,10 @@ def interpret_argsparser():
                         help="the number of dinucleotide shuffles to perform "
                         "on each input sequence", default=20)   
     
+    parser.add_argument('--gen-null-dist', action='store_true', 
+                        help="generate null distribution of shap scores by "
+                        "using a dinucleotide shuffled input sequence") 
+
     parser.add_argument('--seed', type=int,
                         help="seed to create a NumPy RandomState object used"
                         "for performing shuffles", default=20201208)  

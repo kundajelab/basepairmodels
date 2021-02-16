@@ -143,6 +143,23 @@ def interpret(args, interpret_dir):
         # row passes all exception handling
         rows.append(dict(row))
 
+    # if null distribution is requested
+    null_sequences = []
+    if args.gen_null_dist:
+        logging.info("generating null sequences ...")
+        rng = np.random.RandomState(args.seed)
+        
+        # iterate over sequences and get the dinucleotide shuffled
+        # sequence for each of them
+        for seq in sequences:
+            # get a list of shuffled seqs. Since we are setting
+            # num_shufs to 1, the returned list will be of size 1
+            shuffled_seqs = dinuc_shuffle(seq, 1, rng)
+            null_sequences.append(shuffled_seqs[0])
+        
+        # null sequences are now our actual sequences
+        sequences = null_sequences[:]
+
     # one hot encode all the sequences
     X = one_hot_encode(sequences)
     print(X.shape)
