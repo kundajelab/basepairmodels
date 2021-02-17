@@ -38,7 +38,8 @@ setup(
             "interpret = basepairmodels.cli.interpret:interpret_main",
             "modisco = basepairmodels.cli.run_modisco:modisco_main",
             "logits2profile = basepairmodels.cli.logits2profile:logits2profile_main",
-            "bounds = basepairmodels.cli.bounds:bounds_main"
+            "bounds = basepairmodels.cli.bounds:bounds_main",
+            "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main"
         ]
     }
 )
