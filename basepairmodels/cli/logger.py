@@ -2,7 +2,16 @@ import logging
 import os
 import sys
 
-def init_logger(logfname):
+def init_logger(logfname=None):
+    """
+        Function to setup all the logging handlers with the desired 
+        level and message format
+    
+        Args:
+            logfname (str): path to file to store logs
+            
+    """
+    
     # set tensorflow logging lebel
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # ERROR
     logging.getLogger('tensorflow').setLevel(logging.ERROR)
@@ -23,12 +32,13 @@ def init_logger(logfname):
     root.addHandler(ch)
 
 
-    # create file handler which logs even debug messages
-    formatter = logging.Formatter("%(levelname)s:%(asctime)s:"
-                                  "[%(filename)s:%(lineno)s -"
-                                  "%(funcName)20s() ] %(message)s")
-    
-    fh = logging.FileHandler(logfname)
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    root.addHandler(fh)
+    if logfname is not None:
+        # create file handler which logs even debug messages
+        formatter = logging.Formatter("%(levelname)s:%(asctime)s:"
+                                      "[%(filename)s:%(lineno)s -"
+                                      "%(funcName)20s() ] %(message)s")
+
+        fh = logging.FileHandler(logfname)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        root.addHandler(fh)
