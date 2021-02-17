@@ -568,3 +568,32 @@ def bounds_argsparser():
                         default=[7.0, 81])
 
     return parser
+
+def counts_loss_weight_argsparser():
+    """ Command line arguments for the counts_loss_weight script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+
+    parser = argparse.ArgumentParser()
+        
+    parser.add_argument('--input-data', '-i', type=str,
+                        help="path to json file containing task information", 
+                        required=True)
+    
+    parser.add_argument('--peak-width', type=int,
+                        help="the span of the peak to be considered for "
+                        "counts loss weight computation", default=1000)
+    
+    parser.add_argument('--alpha', '-a', type=float, default=1.0,
+                        help="parameter to scale profile loss relative to "
+                        "the counts loss. A value < 1.0 will upweight the "
+                        "profile loss")
+    
+    parser.add_argument('--default', '-d', type=float, default=100.0,
+                        help="default value to use in case there are "
+                        "exceptions or problems during the execution of the "
+                        "script")
+    
+    return parser
