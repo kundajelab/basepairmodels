@@ -59,9 +59,13 @@ def counts_loss_weight_main():
         try:
             input_data = json.loads(inp_json.read())
         except Exception as e:
+            # output the default value to stdout
+            print(args.default)
+        
             exc_type, exc_value, exc_traceback = sys.exc_info()
             raise quietexception.QuietException(
-                exc_type.__name__ + ' ' + str(exc_value))
+                "{} {}. Using default weight {}".format(
+                    exc_type.__name__, str(exc_value), args.default))
     
     # get all the bigWigs and peaks from the input_data
     bigWigs = []
