@@ -374,9 +374,11 @@ def interpret_argsparser():
                         "the --bed-file has 'signalValue' in column 7 to use "
                         "for sorting.")
     
-    parser.add_argument('--control-bigWigs', nargs='+',
-                        help="list of paths to control bigWig files. If not "
-                        "specified the controls are initliazed with zeros.")
+    parser.add_argument('--control-info', type=str,
+                        help="path to the input json file that has paths to "
+                        "control bigWigs. The --task-id is matched with "
+                        "'task_id' in the the json file to get the list of "
+                        "control bigWigs")
 
     parser.add_argument('--control-smoothing', nargs='+',
                         help="sigma and window width for gaussian 1d "

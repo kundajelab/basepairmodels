@@ -59,13 +59,35 @@ def interpret(args, interpret_dir):
         
     # if controls have been specified we to need open the control files
     # for reading
-    if args.control_bigWigs is not None:
-        control_bigWigs = []
-        
-        # open the control bigwig files for reading
+    control_bigWigs = []
+    if args.control_info is not None:
+        # load the control info json file
+        with open(args.control_info, 'r') as inp_json:
+            try:
+                input_data = json.loads(inp_json.read())
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                raise quietexception.QuietException(
+                    exc_type.__name__ + ' ' + str(exc_value))
+               
         logging.info("Opening control bigWigs ...")
-        for control_file in args.control_bigWigs:
-            control_bigWigs.append(pyBigWig.open(control_file))
+        # get the control bigWig for each task
+        for task in input_data:
+            if input_data[task]['task_id'] == args.task_id:
+                if 'control' in input_data[task].keys():
+                    control_bigWig_path = input_data[task]['control']
+                    
+                    # check if the file exists
+                    if not os.path.exists(control_bigWig_path):
+                        raise quietexception.QuietException(
+                            "File {} does not exist".format(
+                                control_bigWig_path))
+                    
+                    logging.info(control_bigWig_path)
+                    
+                    # open the bigWig and add the file object to the 
+                    # list
+                    control_bigWigs.append(pyBigWig.open(control_bigWig_path))
 
     # log of sum of counts of the control track
     # if multiple control files are specified this would be
@@ -114,7 +136,7 @@ def interpret(args, interpret_dir):
             continue        
         
         # fetch control values
-        if args.control_bigWigs is not None:
+        if len(control_bigWigs) > 0:
             # a different start and end for controls since control_len
             # is usually not the same as input_seq_len
             start = row['st'] + row['summit'] - (args.control_len // 2)
@@ -269,14 +291,12 @@ def interpret_main():
         raise quietexception.QuietException(
             "File {} does not exist".format(args.bed_file))
     
-    # if controls are specified check if each of the control files
-    # exist
-    if args.control_bigWigs is not None:
-        for fname in args.control_bigWigs:
-            if not os.path.exists(fname):
-                raise quietexception.QuietException(
-                    "File {} does not exist".format(args.bed_file))
-        
+    # if controls are specified check if the control_info json exists
+    if args.control_info is not None:
+        if not os.path.exists(args.control_info):
+            raise quietexception.QuietException(
+                "Input data file {} does not exist".format(args.control_info))
+            
     # check if both args.chroms and args.sample are specified, only
     # one of the two is allowed
     if args.chroms is not None and args.sample is not None:
