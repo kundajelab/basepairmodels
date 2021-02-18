@@ -51,7 +51,7 @@ sys.stderr = stderr
 
 from basepairmodels.cli.batchgenutils import *
 from basepairmodels.cli.bpnetutils import *
-from basepairmodels.cli.callbacks import BatchController, TimeHistory
+from basepairmodels.cli.callbacks import BatchController, TimeHistory, ReportValidationStatus
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli import experiments
 from basepairmodels.cli import logger
@@ -229,6 +229,7 @@ def train_and_validate(input_params, output_params, genome_params,
 
     # compile the model
     logging.debug("Compiling model")
+    logging.info("counts_loss_weight - {}".format(network_params['counts_loss_weight']))
     model.compile(Adam(lr=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
                         train_gen._num_tasks), 'mse'], 
@@ -238,6 +239,7 @@ def train_and_validate(input_params, output_params, genome_params,
     t1 = time.time()
 
     # start training
+    valStatus = ReportValidationStatus()
     logging.debug("Training started ...")
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -248,7 +250,7 @@ def train_and_validate(input_params, output_params, genome_params,
                                       validation_steps=val_steps, 
                                       callbacks=[es, reduce_lr, time_tracker,
                                                  train_batch_controller,
-                                                 val_batch_controller])
+                                                 val_batch_controller, valStatus])
 
     # end time for training
     t2 = time.time() 
