@@ -80,7 +80,6 @@ def get_average_profile(input_bigWig, peaks_df, peak_width):
 
     # iterate through all peaks and compute the average
     for idx, row in peaks_df.iterrows():
-        
         # raise exception if 'end' - 'start' is not equal to peak_width
         if (row['end'] - row['start']) != peak_width:
             raise quietexception.QuietException(
@@ -222,11 +221,9 @@ def bounds(input_bigWig, peaks_df, peak_width, smoothing_params=[7, 81]):
     bw = pyBigWig.open(input_bigWig)
         
     # arrays to hold metrics values for mnll, cross entropy, jsd, 
-    # of the peak profile computed against uniform, average and
-    # self(observed) profile
-    # In the case of pearson and spearman correlation for upper
-    # bound we use correlation between pseudoreplicates
-    
+    # pearson and spearman correlation of the peak profile computed 
+    # against uniform, average and self(observed peak) profile
+
     # mnll
     mnll_uniform = np.zeros(peaks_df.shape[0])
     mnll_average = np.zeros(peaks_df.shape[0])
@@ -441,6 +438,7 @@ def bounds_main():
     peaks_df['end'] = peaks_df['st'] + peaks_df['summit'] + \
                             (args.peak_width // 2)
     
+    print("Peaks shape", peaks_df.shape[0])
     # reset index in case rows have been filtered
     peaks_df = peaks_df.reset_index()
     
