@@ -6,14 +6,14 @@ BasepairModels is a python package with a CLI to train and interpret base-resolu
 
 ### 1. Install Miniconda
 
-Download and install the latest python 3.7 version of Miniconda for your platform. Here is the link for the installers - <a href="https://docs.conda.io/en/latest/miniconda.html">Miniconda Installers</a>
+Download and install the latest version of Miniconda for your platform. Here is the link for the installers - <a href="https://docs.conda.io/en/latest/miniconda.html">Miniconda Installers</a>
 
 ### 2. Create new virtual environment
 
 Create a new virtual environment and activate it as shown below
 
 ```
-conda create --name basepairmodels python=3.7
+conda create --name basepairmodels python=3.6.8
 conda activate basepairmodels
 ```
 
