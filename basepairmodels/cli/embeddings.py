@@ -45,7 +45,7 @@
 """
 
 
-from basepairmodels.cli import argparsers
+from basepairmodels.cli.argparsers import embeddings_argsparser
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 from mseqgen.sequtils import one_hot_encode
@@ -207,7 +207,7 @@ def embeddings_main():
     """
     
     # parse the command line arguments
-    parser = argparsers.embeddings_argsparser()
+    parser = embeddings_argsparser()
     args = parser.parse_args()
 
     # check if the model file exists
@@ -215,15 +215,15 @@ def embeddings_main():
         logging.error("Model {} does not exist".format(
             args.model))
 
-    # check if the chromosome positions file exists
-    if not os.path.exists(args.chrom_positions):
-        logging.error("Chromosome positions file {} does not exist".format(
-            args.chrom_positions))
+    # check if the peaks file exists
+    if not os.path.exists(args.peaks):
+        logging.error("peaks file {} does not exist".format(
+            args.peaks))
 
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
         logging.error("Directory {} does not exist".format(
-            args.output_dir))
+            args.output_directory))
     
     # filename to write debug logs
     logfname = "{}/embeddings.log".format(args.output_directory)
@@ -239,9 +239,16 @@ def embeddings_main():
         logging.info("loaded model {}".format(args.model))
         
         # load the chromosome positions as a pandas dataframe
-        chrom_positions = pd.read_csv(args.chrom_positions, header=None, 
-                                      names=['chrom', 'pos'], 
-                                      dtype={'chrom':str, 'pos':int})
+        peaks_df = pd.read_csv(args.peaks, sep='\t', header=None, 
+                               names=['chrom', 'st', 'e', 'name', 'score',
+                                      'strand', 'signal', 'p', 'q', 'summit'])
+
+        # create new column for peak position
+        peaks_df['pos'] = peaks_df['st'] + peaks_df['summit']
+
+        # create a new dataframe with just 2 columns 'chrom' & 'pos'
+        chrom_positions = peaks_df[['chrom', 'pos']]
+        
         logging.info("Total embeddings to be computed - {}".format(
             len(chrom_positions)))
         
