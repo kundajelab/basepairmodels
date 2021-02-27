@@ -236,6 +236,90 @@ def predict_argsparser():
                         "before writing to bigWig files", default=10000)
     return parser
 
+def fastpredict_argsparser():
+    """ Command line arguments for the predict script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+    
+    parser = argparse.ArgumentParser()
+    
+    # batch gen parameters
+    parser.add_argument('--batch-size', type=int, 
+                        help="predict batch size", default=64)
+        
+    parser.add_argument('--threads', type=int,
+                        help="number of parallel threads for batch generation",
+                        default=10)
+        
+    parser.add_argument('--input-seq-len', type=int, 
+                        help="length of input DNA sequence", default=2114)
+
+    parser.add_argument('--output-len', type=int, 
+                        help="length of output profile", default=1000)
+    
+    # predict modes
+    parser.add_argument('--predict-peaks', action='store_true', 
+                        help="generate predictions only on the peaks "
+                        "contained in the .bed files from --input-data. "
+                        "If not specified tiled genome wide predictions "
+                        "are generated.")
+
+    # reference params
+    parser.add_argument('--reference-genome', type=str, required=True,
+                        help="the path to the reference genome fasta file")
+    
+    parser.add_argument('--chrom-sizes', '-s', type=str, required=True,
+                        help="path to chromosome sizes file")
+    
+    # input data params
+    parser.add_argument('--chroms', nargs='+', required=True,
+                        help="list of chromosomes for prediction")
+        
+    parser.add_argument('--input-data', type=str, required=True,
+                        help="path to json file containing task information")
+    
+    parser.add_argument('--model', type=str, required=True,
+                        help="path to the .h5 model file")
+    
+    parser.add_argument('--sequence_generator_name', type=str, required=True,
+                        help="the name of the sequence generator in mseqgen "
+                        "to use for batch generation")
+    
+    parser.add_argument('--stranded', action='store_true', 
+                        help="specify if the input data is stranded or "
+                        "unstranded")
+
+    parser.add_argument('--has-control', action='store_true', 
+                        help="specify if the input data has controls")
+    
+    # network params
+    parser.add_argument('--control-smoothing', nargs='+',
+                        help="sigma and window size for gaussian 1D smoothing "
+                        "of second control track", default=[7.0, 81])
+
+    # output params
+    parser.add_argument('--output-window-size', type=int, required=True,
+                        help="size of the central window of the output "
+                        "profile predictions that will be written to the "
+                        "HDF5/bigWig files (should be <= --output-len)")
+    
+    parser.add_argument('--output-dir', type=str, required=True,
+                        help="destination directory to store predictions ")
+
+    parser.add_argument('--time-zone', type=str,
+                        help="time zone to use for timestamping model "
+                        "directories", default='US/Pacific')
+
+    parser.add_argument('--automate-filenames', action='store_true', 
+                        help="specify if the predictions output should "
+                        "be stored in a timestamped subdirectory within "
+                        "--output-dir")
+
+    return parser
+
+
 def metrics_argsparser():
     """ Command line arguments for the metrics script
 
@@ -451,36 +535,36 @@ def embeddings_argsparser():
     parser.add_argument('--reference-genome', '-g', type=str, required=True,
                         help="number of gpus to use")
     
-    parser.add_argument('--input-layer-name', '-i', type=str, 
+    parser.add_argument('--input-layer-name', type=str, 
                         help="name of the input sequence layer", 
                         default='sequence')
 
-    parser.add_argument('--input-layer-shape', '-s', nargs='+', required=True,
+    parser.add_argument('--input-layer-shape', nargs='+', required=True,
                         type=int,
                         help="shape of the input sequence layer (specify"
                         "list of values and omit the batch(?) dimension)")
     
-    parser.add_argument('--embeddings-layer-name', '-e', type=str, 
+    parser.add_argument('--embeddings-layer-name', type=str, 
                         help="name of the embeddings layer", 
                         default='combined_conv')
     
-    parser.add_argument('--flatten-embeddings-layer', '-l', 
+    parser.add_argument('--flatten-embeddings-layer',
                         action='store_true', 
                         help="specify if the embeddings layers should be"
                         "flattened")
 
-    parser.add_argument('--chrom-positions', '-c', type=str, 
-                        help="2 column csv file containing chromosome"
-                        "positions to compute embeddings")
+    parser.add_argument('--peaks', type=str, required=True,
+                        help="10 column bed narrowPeak file containing "
+                        "chromosome positions to compute embeddings")
     
-    parser.add_argument('--batch-size', '-b', type=int, 
+    parser.add_argument('--batch-size', type=int, 
                         help="batch size for processing the "
                         "chromosome positions", default=64)
         
-    parser.add_argument('--output-directory', '-o', type=str,
+    parser.add_argument('--output-directory', type=str,
                         help="output directory path", default='.')
     
-    parser.add_argument('--output-filename', '-f', type=str,
+    parser.add_argument('--output-filename', type=str,
                         help="name of compressed numpy file to store "
                         "the embeddings", default="embeddings.npz")
     
