@@ -112,7 +112,7 @@ def modisco_main():
                                            hypothetical_contribs=task_to_hyp_scores, 
                                            one_hot=onehot_data)
 
-    modisco_results_path = '{}/modisco_results.hd5'.format(args.output_directory)
+    modisco_results_path = '{}/modisco_results.h5'.format(args.output_directory)
         
     tfmodisco_results.save_hdf5(h5py.File(modisco_results_path))
     print("Saved modisco results to file {}".format(str(modisco_results_path)))
