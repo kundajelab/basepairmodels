@@ -40,7 +40,9 @@ setup(
             "logits2profile = basepairmodels.cli.logits2profile:logits2profile_main",
             "bounds = basepairmodels.cli.bounds:bounds_main",
             "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main",
-            "embeddings = basepairmodels.cli.embeddings:embeddings_main"
+            "embeddings = basepairmodels.cli.embeddings:embeddings_main",            
+            "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
+            "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main"
 #            "fastpredict = basepairmodels.cli.fastpredict:predict_main"
         ]
     }

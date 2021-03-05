@@ -492,8 +492,92 @@ def interpret_argsparser():
     parser.add_argument('--time-zone', type=str,
                         help="time zone to use for timestamping output "
                         "directories", default='US/Pacific')
+    return parser
+
+
+def shap_scores_argsparser():
+    """ Command line arguments for the shap script
+
+        Returns:
+            argparse.ArgumentParser
+    """
     
+    parser = argparse.ArgumentParser()
     
+    #reference params
+    parser.add_argument('--reference-genome', '-g', type=str, required=True,
+                        help="path to the reference genome file")
+
+    # input params
+    parser.add_argument('--input-seq-len', type=int, required=True,
+                        help="the length of the input sequence to the model")
+    
+    parser.add_argument('--control-len', type=int, required=True,
+                        help="the length of the control input to the model")
+
+    parser.add_argument('--model', '-m', type=str, required=True,
+                        help="the path to the model (.h5) file")
+
+    parser.add_argument('--task-id', '-t', type=int,
+                        help="In the multitask case the integer sequence "
+                        "number of the task for which the interpretation "
+                        "scores should be computed. For single task use 0.",
+                        default=0)
+    
+    parser.add_argument('--bed-file', '-b', type=str, required=True,
+                        help="the path to the bed file containing "
+                        "postions at which the model should be interpreted")
+
+    parser.add_argument('--sample', '-s', type=int,
+                        help="the number of samples to randomly sample from "
+                        "the bed file. Only one of --sample or --chroms can "
+                        "be used.")
+
+    parser.add_argument('--chroms', '-c', nargs='+',
+                        help="list of chroms on which the contribution scores "
+                        "are to be computed. If not specified all chroms in "
+                        "--bed-file will be processed.")
+
+    parser.add_argument('--presort-bed-file', action='store_true', 
+                        help="specify if the --bed-file should be sorted in "
+                        "descending order of enrichment. It is assumed that "
+                        "the --bed-file has 'signalValue' in column 7 to use "
+                        "for sorting.")
+    
+    parser.add_argument('--control-info', type=str,
+                        help="path to the input json file that has paths to "
+                        "control bigWigs. The --task-id is matched with "
+                        "'task_id' in the the json file to get the list of "
+                        "control bigWigs")
+
+    parser.add_argument('--control-smoothing', nargs='+',
+                        help="sigma and window width for gaussian 1d "
+                        "smoothing of the control", default=[7.0, 81])
+    
+    parser.add_argument('--num-shuffles', type=int,
+                        help="the number of dinucleotide shuffles to perform "
+                        "on each input sequence", default=20)   
+    
+    parser.add_argument('--gen-null-dist', action='store_true', 
+                        help="generate null distribution of shap scores by "
+                        "using a dinucleotide shuffled input sequence") 
+
+    parser.add_argument('--seed', type=int,
+                        help="seed to create a NumPy RandomState object used"
+                        "for performing shuffles", default=20210304)  
+    
+    # output params
+    parser.add_argument('--output-directory', '-o', type=str, required=True,
+                        help="destination directory to store the "
+                        "interpretation scores")
+    
+    parser.add_argument('--automate-filenames', action='store_true', 
+                        help="specify if the interpret output should be stored"
+                        "in a timestamped subdirectory within --output-dir")
+
+    parser.add_argument('--time-zone', type=str,
+                        help="time zone to use for timestamping output "
+                        "directories", default='US/Pacific')
     return parser
 
 
@@ -519,6 +603,30 @@ def modisco_argsparser():
     
     return parser
 
+def motif_discovery_argsparser():
+    """ Command line arguments for the motif_discovery script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+    
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("--scores-path", type=str, 
+                        help="Path to the importance scores hdf5 file")
+    
+    parser.add_argument("--scores-locations", type=str, 
+                        help="path to bed file containing the locations "
+                        "that match the scores")
+
+    parser.add_argument("--output-directory", type=str, 
+                        help="Path to the output directory")
+    
+    parser.add_argument('--modisco-window-size', type=int,
+                        help="size of the window around the peak "
+                        "coodrinate that will be considered for motif"
+                        "discovery", default=400)
+    return parser
 
 def embeddings_argsparser():
     """ Command line arguments for the embeddings script
