@@ -66,55 +66,68 @@ def motif_discovery_main():
     # Load the scores
     scores = h5py.File(args.scores_path, 'r')
     
-    # we swap axes to match the shape that the modisco worflow 
-    # requires
-    _shap_scores = scores['hyp_scores']
-    _one_hot_seqs = scores['input_seqs']
+#     # we swap axes to match the shape that the modisco worflow 
+#     # requires
+#     _shap_scores = scores['hyp_scores']
+#     _one_hot_seqs = scores['input_seqs']
     
-    # compute the projected shap scores
-    _proj_shap_scores = np.multiply(_one_hot_seqs, _shap_scores)
+#     # compute the projected shap scores
+#     _proj_shap_scores = np.multiply(_one_hot_seqs, _shap_scores)
     
-    # lists to hold values corresponding to the central
-    # modisco_window_size
-    shap_scores = []
-    proj_shap_scores = []
-    one_hot_seqs = [] 
+#     # lists to hold values corresponding to the central
+#     # modisco_window_size
+#     shap_scores = []
+#     proj_shap_scores = []
+#     one_hot_seqs = [] 
+
+#     # window start and end based on modisco_window_size
+#     center = _shap_scores.shape[1] // 2
+#     start = center - args.modisco_window_size // 2
+#     end = center + args.modisco_window_size // 2
+    
+#     print(center, start, end)
+    
+#     # hyp scores for the modisco window
+#     for score in _shap_scores:
+#         shap_scores.append(score[start:end, :])
+
+#     # projected scores for the modisco window
+#     for score in _proj_shap_scores:
+#         proj_shap_scores.append(score[start:end, :])
+
+#     # one hot seqs for the modisco window
+#     for seq in _one_hot_seqs:
+#         one_hot_seqs.append(seq[start:end, :])
 
     # window start and end based on modisco_window_size
-    center = _shap_scores.shape[1] // 2
+    center = scores['hyp_scores'].shape[1] // 2
     start = center - args.modisco_window_size // 2
     end = center + args.modisco_window_size // 2
     
-    print(center, start, end)
+    print("Shap scores shape - {}".format(scores['hyp_scores'].shape))
     
-    # hyp scores for the modisco window
-    for score in _shap_scores:
-        shap_scores.append(score[start:end, :])
+    shap_scores = scores['hyp_scores'][:,start:end,:]
+    one_hot_seqs = scores['input_seqs'][:,start:end,:]
+    print("Done slicing shap scores and one hot seqs")
+    
+    proj_shap_scores = np.multiply(one_hot_seqs, shap_scores)
+    print("Done computing projected shap scores")
 
-    # projected scores for the modisco window
-    for score in _proj_shap_scores:
-        proj_shap_scores.append(score[start:end, :])
-
-    # one hot seqs for the modisco window
-    for seq in _one_hot_seqs:
-        one_hot_seqs.append(seq[start:end, :])
-
+    scores.close()
+    
     tasks = ['task0']
     task_to_scores = OrderedDict()
     task_to_hyp_scores = OrderedDict()
     task_to_scores['task0']  = proj_shap_scores
     task_to_hyp_scores['task0']  = shap_scores
 
-    print(one_hot_seqs[0].shape)
-    print(proj_shap_scores[0].shape)
-    print(shap_scores[0].shape)
-    
     tfmodisco_workflow = modisco.tfmodisco_workflow.workflow.TfModiscoWorkflow(
         sliding_window_size=21, flank_size=10, target_seqlet_fdr=0.05, 
         seqlets_to_patterns_factory=\
         modisco.tfmodisco_workflow.seqlets_to_patterns
             .TfModiscoSeqletsToPatternsFactory(
-            embedder_factory=\
+                n_cores=10,
+                embedder_factory=\
                 modisco.seqlet_embedding.advanced_gapped_kmer
                 .AdvancedGappedKmerEmbedderFactory(),
             trim_to_window_size=30, initial_flank_to_add=10, 
