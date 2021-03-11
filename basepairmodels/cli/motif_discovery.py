@@ -66,39 +66,6 @@ def motif_discovery_main():
     # Load the scores
     scores = h5py.File(args.scores_path, 'r')
     
-#     # we swap axes to match the shape that the modisco worflow 
-#     # requires
-#     _shap_scores = scores['hyp_scores']
-#     _one_hot_seqs = scores['input_seqs']
-    
-#     # compute the projected shap scores
-#     _proj_shap_scores = np.multiply(_one_hot_seqs, _shap_scores)
-    
-#     # lists to hold values corresponding to the central
-#     # modisco_window_size
-#     shap_scores = []
-#     proj_shap_scores = []
-#     one_hot_seqs = [] 
-
-#     # window start and end based on modisco_window_size
-#     center = _shap_scores.shape[1] // 2
-#     start = center - args.modisco_window_size // 2
-#     end = center + args.modisco_window_size // 2
-    
-#     print(center, start, end)
-    
-#     # hyp scores for the modisco window
-#     for score in _shap_scores:
-#         shap_scores.append(score[start:end, :])
-
-#     # projected scores for the modisco window
-#     for score in _proj_shap_scores:
-#         proj_shap_scores.append(score[start:end, :])
-
-#     # one hot seqs for the modisco window
-#     for seq in _one_hot_seqs:
-#         one_hot_seqs.append(seq[start:end, :])
-
     # window start and end based on modisco_window_size
     center = scores['hyp_scores'].shape[1] // 2
     start = center - args.modisco_window_size // 2
