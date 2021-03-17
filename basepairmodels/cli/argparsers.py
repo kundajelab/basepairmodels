@@ -689,7 +689,7 @@ def embeddings_argsparser():
     
     parser.add_argument('--output-filename', type=str,
                         help="name of compressed numpy file to store "
-                        "the embeddings", default="embeddings.npz")
+                        "the embeddings", default="embeddings.h5")
     
     
     return parser
