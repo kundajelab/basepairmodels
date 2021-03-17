@@ -49,15 +49,20 @@ from basepairmodels.cli.argparsers import embeddings_argsparser
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 from mseqgen.sequtils import one_hot_encode
+from mseqgen.quietexception import QuietException
 
 from keras.models import Model, load_model
 from keras.utils import CustomObjectScope
-from keras.layers import Flatten
+from keras.layers import Flatten, Cropping1D, Lambda, Reshape
+from tqdm import tqdm 
 
+import keras.backend as K
+import h5py
 import numpy as np
 import os
 import pandas as pd
 import pysam
+
 
 
 def get_sequences(chrom_positions, reference_genome_file, seq_len):
@@ -97,8 +102,7 @@ def get_sequences(chrom_positions, reference_genome_file, seq_len):
                         
     # one hot encode all the sequences in the batch 
     return one_hot_encode(sequences)
-    
-    
+
     
 def dataframe_batcher(df, batch_size):
     """
@@ -119,7 +123,7 @@ def dataframe_batcher(df, batch_size):
 
     
 def compute_embeddings(model, referece_genome_file, input_seq_len, 
-                       embeddings_layer_shape, chrom_positions, batch_size, 
+                       embeddings_output_shape, chrom_positions, batch_size, 
                        output_filename, embeddings_layer_flattened):
     """
         Compute embeddings for specified chromosome positions and save
@@ -131,8 +135,8 @@ def compute_embeddings(model, referece_genome_file, input_seq_len,
             referece_genome_file (str): path to the reference genome fasta 
                 file
             input_seq_len (int): input sequence length
-            embeddings_layer_shape (list): shape of the original 
-                embeddings layer
+            embeddings_output_shape (list): shape of the embeddings 
+                output of the model
             chrom_positions (pandas.Dataframe): two column dataframe 
                 with 'chrom' and 'pos' columns
             batch_size (int): the size of batches to divide and process
@@ -144,33 +148,75 @@ def compute_embeddings(model, referece_genome_file, input_seq_len,
                  
     """
     
-    # create a numpy array to store all the results of the 
-    # embeddings
-    embeddings_layer_shape.insert(0, len(chrom_positions))
-    embeddings = np.zeros(embeddings_layer_shape)
+    # the shape of the embeddings output for all N examples
+    embeddings_output_shape.insert(0, len(chrom_positions))
+
+    # the shape of the embeddings output after aggregation along  
+    # the sequence length dimension (2)
+    embeddings_aggreagation_shape = (embeddings_output_shape[0], 
+                                     embeddings_output_shape[1],
+                                     embeddings_output_shape[3])
     
-    # reshape the numpy array if the embeddings layer is flattened
-    if embeddings_layer_flattened:
-        embeddings = embeddings.reshape(embeddings.shape[0], -1)
+    # we'll write all the aggregated (mean, min, max & standard
+    # deviation) outputs to a hdf5 file
+    # open h5py file for writing
+    h5_file = h5py.File(output_filename, "w")
+   
+    # create the coords group
+    coord_group = h5_file.create_group("coords")
+    num_examples = len(chrom_positions)
+    coords_chrom_dset = coord_group.create_dataset(
+        "coords_chrom", (num_examples,),
+        dtype=h5py.string_dtype(encoding="ascii"), compression="gzip")
+    coords_start_dset = coord_group.create_dataset(
+        "coords_start", (num_examples,), dtype=int, compression="gzip")
+    coords_end_dset = coord_group.create_dataset(
+        "coords_end", (num_examples,), dtype=int, compression="gzip")
     
+    # create the embeddings group
+    emb_group = h5_file.create_group("embeddings")
+    embeddings_mean = emb_group.create_dataset(
+        "mean", embeddings_aggreagation_shape, compression="gzip")
+    embeddings_std = emb_group.create_dataset(
+        "std", embeddings_aggreagation_shape, compression="gzip")
+    embeddings_max = emb_group.create_dataset(
+        "max", embeddings_aggreagation_shape, compression="gzip")
+    embeddings_min = emb_group.create_dataset(
+        "min", embeddings_aggreagation_shape, compression="gzip")
+   
+    # the lists of chroms, starts & ends
+    coords_chrom_dset = chrom_positions['chrom'].values
+    coords_start_dset = (chrom_positions['pos'] - input_seq_len // 2).values
+    coords_end_dset = (chrom_positions['pos'] + input_seq_len // 2).values
+
     # batch the chromosome positions dataframe and process one batch
     # at a time
-    for batch, start, end in dataframe_batcher(chrom_positions, batch_size):
+    num_batches = (len(chrom_positions) // batch_size) + 1
+    for batch, start, end in tqdm(
+        dataframe_batcher(chrom_positions, batch_size), desc="batch", 
+        total=num_batches):
         
         # get the one hot encoded sequences for the batch
         sequences = get_sequences(batch, referece_genome_file, input_seq_len)
         
-        # compute the predictions one the embeddings models
+        # compute the predictions
         predictions =  model.predict(sequences)
 
-        # populate the embeddings numpy array at the corresponding
-        # indices
-        embeddings[start:end, ...] = model.predict(sequences)
-
-    # save embeddings to output file
-    np.savez_compressed(output_filename, embeddings=embeddings)
-         
+        # assign mean values for the batch
+        embeddings_mean[start:end, ...] = np.mean(predictions, axis=2)
+        
+        # assign min values for the batch
+        embeddings_min[start:end, ...] = np.min(predictions, axis=2)
+        
+        # assign max values for the batch
+        embeddings_max[start:end, ...] = np.max(predictions, axis=2)
+        
+        # assign max values for the batch
+        embeddings_std[start:end, ...] = np.std(predictions, axis=2)
+ 
+    h5_file.close()
     
+
 def find_input_layer(model, input_layer_name, input_layer_shape):
     """ 
         Find a matching input layer given a name and shape
@@ -212,19 +258,31 @@ def embeddings_main():
 
     # check if the model file exists
     if not os.path.exists(args.model):
-        logging.error("Model {} does not exist".format(
-            args.model))
+        raise QuietException(
+            "Model {} does not exist".format(args.model))
 
     # check if the peaks file exists
     if not os.path.exists(args.peaks):
-        logging.error("peaks file {} does not exist".format(
-            args.peaks))
+        raise QuietException(
+            "peaks file {} does not exist".format(args.peaks))
 
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
-        logging.error("Directory {} does not exist".format(
-            args.output_directory))
+        raise QuietException(
+            "Directory {} does not exist".format(args.output_directory))
     
+    if (args.embeddings_layer_name is not None) and \
+        (args.numbered_embeddings_layers_prefix is not None):
+        raise QuietException(
+            "Only one of [--embeddings-layer-name, "
+            "--numbered-embeddings-layers-prefix] can be used")
+    
+    if (args.embeddings_layer_name is None) and \
+        (args.numbered_embeddings_layers_prefix is None):
+        raise QuietException(
+            "One of [--embeddings-layer-name, "
+            "--numbered-embeddings-layers-prefix] must be used")
+        
     # filename to write debug logs
     logfname = "{}/embeddings.log".format(args.output_directory)
     
@@ -272,29 +330,80 @@ def embeddings_main():
         else:
             # construct a new model that's a branch of the original 
             # model that computes just the embeddings given an input
-            # dna sequence            
-            embeddings_layer = model.get_layer(
-                args.embeddings_layer_name).output
+            # dna sequence 
             
-            if args.flatten_embeddings_layer:
-                embeddings_model = Model(inputs=model.input[input_idx], 
-                                         outputs=Flatten()(embeddings_layer))
-            else:
-                embeddings_model = Model(inputs=model.input[input_idx],
-                                         outputs=embeddings_layer)
-                    
-            # get embeddings layer shape, omit the batch dimension
-            embeddings_layer_shape = embeddings_layer.shape.as_list()[1:]
-    
+            # lists to hold layer names and the corresponding layers
+            # from the model
+            layer_names = []
+            layers = []
+            
+            # if only a single layer is requested
+            if args.embeddings_layer_name is not None:
+                layer_names.append(args.embeddings_layer_name)
+            
+            # if many layers with same prefix are requested
+            elif args.numbered_embeddings_layers_prefix is not None:
+                for i in range(args.num_numbered_embeddings_layers):
+                    layer_name = '{}_{:d}'.format(
+                        args.numbered_embeddings_layers_prefix, i + 1)
+                    layer_names.append(layer_name)
+                
+            
+            # iterate over layer names and fetch the model layer
+            for layer_name in layer_names:
+                try:
+                    layer = model.get_layer(layer_name).output
+                        
+                    # crop the layer to required size
+                    if args.cropped_size is not None:
+                        crop_size = (layer.shape.as_list()[1] - \
+                           args.cropped_size) // 2
+                        layer = Cropping1D(crop_size)(layer)
+                                            
+                    layers.append(layer)
+                except ValueError:
+                    raise quietexception.QuietException(
+                        "No match found for {}".format(layer_name))
+
+            if len(layers) == 1:
+                # we'll reshape the output to create a dimension
+                # at axis = 1, the stack operation in the else 
+                # block doesn't seem to like lists of one element
+                
+                # get the existing shape of the layer output
+                old_shape = layers[0].shape.as_list()
+                
+                # replace the None at dimension 0 (batch) to 1
+                # the Reshape will add a new None dimension
+                new_shape = old_shape[:]
+                new_shape[0] = 1
+
+                # reshape the output to mimic the stack operation
+                embeddings_output = Reshape(new_shape)(layers[0])
+            else:                
+                
+                # the final output is a vertical stacking of 
+                # all embeddings layers
+                embeddings_output = Lambda(
+                    lambda x: K.stack(x, axis=1)
+                )(list(layers))
+                                        
+            # create the emneddings model
+            embeddings_model = Model(inputs=model.input[input_idx], 
+                                     outputs=embeddings_output)
+                        
+            # get embeddings output shape, omit the batch dimension
+            embeddings_output_shape = embeddings_output.shape.as_list()[1:]
+
             # output compressed numpy file containing the embeddings
             output_filename = os.path.join(args.output_directory, 
                                            args.output_filename)
-            
+
             # compute the embeddings
-            compute_embeddings(embeddings_model, args.reference_genome, 
-                               input_seq_len, embeddings_layer_shape,
-                               chrom_positions, args.batch_size, 
-                               output_filename, args.flatten_embeddings_layer)
-    
+            compute_embeddings(
+                embeddings_model, args.reference_genome, input_seq_len, 
+                embeddings_output_shape, chrom_positions, args.batch_size, 
+                output_filename, args.flatten_embeddings_layer)
+
 if __name__ == '__main__':
     embeddings_main()

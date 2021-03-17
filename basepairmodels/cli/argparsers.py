@@ -653,9 +653,24 @@ def embeddings_argsparser():
                         "list of values and omit the batch(?) dimension)")
     
     parser.add_argument('--embeddings-layer-name', type=str, 
-                        help="name of the embeddings layer", 
-                        default='combined_conv')
+                        help="full name of layer for embeddings output. "
+                        "Cannot be combined with "
+                        "--numbered-embeddings-layers-prefix.")
     
+    parser.add_argument('--cropped-size', type=int,
+                        help="the size to which all embeddings outputs "
+                        "should be cropped to")
+
+    parser.add_argument('--numbered-embeddings-layers-prefix', type=str, 
+                        help="common prefix string, of all required "
+                        "layers, for matching. Cannot be "
+                        "combined with --embeddings-layer-name")
+
+    parser.add_argument('--num-numbered-embeddings-layers', type=int, 
+                        help="number of embeddings layers with common prefix "
+                        "specified by --numbered-embeddings-layers-prefix. ", 
+                        default=8)
+
     parser.add_argument('--flatten-embeddings-layer',
                         action='store_true', 
                         help="specify if the embeddings layers should be"
