@@ -79,6 +79,7 @@ def logits2profile_main():
     peaks_df = pd.read_csv(args.peaks, usecols=[0, 1 ,2], 
                            names=['chrom', 'start', 'end'], header=None,
                            sep='\t')
+    peaks_df = peaks_df[peaks_df['chrom'].isin(args.chroms)]
     peaks_df['_start'] = peaks_df['start'] + \
                          (peaks_df['end'] - peaks_df['start']) // 2 - \
                          args.window_size // 2 
