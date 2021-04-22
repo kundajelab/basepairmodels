@@ -316,7 +316,12 @@ def fastpredict_argsparser():
                         help="specify if the predictions output should "
                         "be stored in a timestamped subdirectory within "
                         "--output-dir")
-
+    
+    parser.add_argument('--generate-predicted-profile-bigWigs', 
+                        action='store_true', 
+                        help="generate bigWig files for predicted profile"
+                        "tracks")
+    
     return parser
 
 
@@ -387,6 +392,10 @@ def metrics_argsparser():
     parser.add_argument('--chroms', '-c', nargs='+', required=True,
                         help="list of test chromosomes to compute metrics")
     
+    parser.add_argument('--exclude-zero-profiles', action='store_true',
+                        help="exclude observed or predicted profiles that "
+                        "are all zeros")
+
     # output params
     parser.add_argument('--output-dir', '-o', type=str, required=True,
                         help="destination directory to store metrics results")

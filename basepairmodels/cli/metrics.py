@@ -367,6 +367,10 @@ def metrics_main():
                 # if we are in the else block it implies profileA has
                 # actual counts
                 valsProfileA = profileA
+        
+        elif args.exclude_zero_profiles:
+                continue
+        
         else:
             # uniform distribution
             probProfileA = 1.0/len(profileA) * np.ones(len(profileA), 
@@ -407,7 +411,10 @@ def metrics_main():
                 # if we are in the else block it implies profileB has
                 # actual counts
                 valsProfileB = profileB
-
+        
+        elif args.exclude_zero_profiles:
+                continue
+        
         else:
             # uniform distribution
             probProfileB = 1.0/len(profileB) * np.ones(len(profileB), 
