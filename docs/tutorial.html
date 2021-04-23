@@ -310,19 +310,24 @@ mv peaks.bed ENCSR000EGM/data
 
 mkdir <span class="nv">$MODEL_DIR</span>
 train <span class="se">\</span>
-    --output-dir <span class="nv">$MODEL_DIR</span> <span class="se">\</span>
-    --splits <span class="nv">$CV_SPLITS</span> <span class="se">\</span>
     --input-data <span class="nv">$INPUT_DATA</span> <span class="se">\</span>
-    --chrom-sizes <span class="nv">$CHROM_SIZES</span> <span class="se">\</span>
+    --stranded <span class="se">\</span>
+    --has-control <span class="se">\</span>
+    --output-dir <span class="nv">$MODEL_DIR</span> <span class="se">\</span>
     --reference-genome <span class="nv">$REFERENCE_GENOME</span> <span class="se">\</span>
+    --chroms <span class="k">$(</span>paste -s -d <span class="s1">&#39; &#39;</span> <span class="nv">$reference_dir</span>/hg38_chroms.txt<span class="k">)</span> <span class="se">\</span>
+    --chrom-sizes <span class="nv">$CHROM_SIZES</span> <span class="se">\</span>
+    --splits <span class="nv">$CV_SPLITS</span> <span class="se">\</span>
+    --model-arch-name BPNet1000d8 <span class="se">\</span>
+    --sequence-generator-name BPNet <span class="se">\</span>
+    --model-output-filename model <span class="se">\</span>
+    --input-seq-len <span class="m">2114</span> <span class="se">\</span>
+    --output-len <span class="m">1000</span> <span class="se">\</span>
+    --filters <span class="m">64</span> <span class="se">\</span>
+    --shuffle <span class="se">\</span>
     --threads <span class="m">10</span> <span class="se">\</span>
     --epochs <span class="m">100</span> <span class="se">\</span>
-    --sampling-mode peaks <span class="se">\</span>
-    --chroms <span class="k">$(</span>cat <span class="si">${</span><span class="nv">REFERENCE_DIR</span><span class="si">}</span>/hg38_chroms.txt<span class="k">)</span> <span class="se">\</span>
-    --has-control <span class="se">\</span>
-    --stranded <span class="se">\</span>
-    --automate-filenames <span class="se">\</span>
-    --model-arch-name BPNet
+    --learning-rate <span class="m">0</span>.004
 </pre></div>
 </div>
 <p>The <cite>splits.json</cite> file contains information about the chromosomes that are used for validation and test. Here is a sample that contains one split.</p>
@@ -354,37 +359,55 @@ predict <span class="se">\</span>
     --batch-size <span class="m">1</span> <span class="se">\</span>
     --has-control <span class="se">\</span>
     --stranded <span class="se">\</span>
-    --automate-filenames
+    --input-seq-len <span class="m">2114</span> <span class="se">\</span>
+    --output-len <span class="m">1000</span> <span class="se">\</span>
+    --output-window-size <span class="m">1000</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="compute-metrics">
 <h2>4. Compute metrics<a class="headerlink" href="#compute-metrics" title="Permalink to this headline">¶</a></h2>
+<p>To compute metrics first compute the min max bounds for each peak individually, and on both the plus and minus strands. This can be done by a single command as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BOUNDS_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/bounds
+mkdir <span class="nv">$METRICS_DIR</span>
+bounds <span class="se">\</span>
+    --input-profiles <span class="nv">$DATA_DIR</span>/plus.bw <span class="nv">$DATA_DIR</span>/minus.bw <span class="se">\</span>
+    --output-names task0_plus task0_minus <span class="se">\</span>
+    --output-directory <span class="nv">$BOUNDS_DIR</span> <span class="se">\</span>
+    --peaks <span class="nv">$DATA_DIR</span>/peaks.bed <span class="se">\</span>
+    --chroms chr1
+</pre></div>
+</div>
+<p>Now compute metrics on the <cite>plus</cite> and <cite>minus</cite> strand separately using the following command</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METRICS_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/metrics
 mkdir <span class="nv">$METRICS_DIR</span>
 metrics <span class="se">\</span>
-   -A <span class="o">[</span>path to training bigwig<span class="o">]</span> <span class="se">\</span>
-   -B <span class="o">[</span>path to predictions bigwig<span class="o">]</span> <span class="se">\</span>
+   -A <span class="o">[</span>path to profile training bigwig<span class="o">]</span> <span class="se">\</span>
+   -B <span class="o">[</span>path to profile predictions bigwig<span class="o">]</span> <span class="se">\</span>
    --peaks <span class="nv">$DATA_DIR</span>/peaks.bed <span class="se">\</span>
    --chroms chr1 <span class="se">\</span>
-   --smooth-profileA &lt;sigma&gt; &lt;window_width&gt; <span class="se">\</span>
+   --output-dir <span class="nv">$METRICS_DIR</span> <span class="se">\</span>
    --apply-softmax-to-profileB <span class="se">\</span>
    --countsB <span class="o">[</span>path to exponentiated counts predictions bigWig<span class="o">]</span> <span class="se">\</span>
-   --output-dir <span class="nv">$METRICS_DIR</span> <span class="se">\</span>
    --chrom-sizes <span class="nv">$CHROM_SIZES</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="compute-importance-scores">
 <h2>5. Compute importance scores<a class="headerlink" href="#compute-importance-scores" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">INTERPRET_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/interpretations
-mkdir <span class="nv">$INTERPRET_DIR</span>
-interpret <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">SHAP_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/shap
+mkdir <span class="nv">$SHAP_DIR</span>
+shap_scores <span class="se">\</span>
     --reference-genome <span class="nv">$REFERENCE_GENOME</span> <span class="se">\</span>
     --model <span class="k">$(</span>ls <span class="si">${</span><span class="nv">MODEL_DIR</span><span class="si">}</span>/***INSERT-DIRECTORY-NAME-HERE***/*.h5<span class="k">)</span> <span class="se">\</span>
     --bed-file <span class="nv">$DATA_DIR</span>/peaks.bed <span class="se">\</span>
     --chroms chr1 <span class="se">\</span>
-    --output-dir <span class="nv">$INTERPRET_DIR</span> <span class="se">\</span>
+    --output-dir <span class="nv">$SHAP_DIR</span> <span class="se">\</span>
+    --input-seq-len <span class="m">2114</span> <span class="se">\</span>
+    --control-len <span class="m">1000</span> <span class="se">\</span>
+    --control-smoothing <span class="m">7</span>.0 <span class="m">81</span> <span class="se">\</span>
+    --task-id <span class="m">0</span> <span class="se">\</span>
+    --control-info <span class="nv">$INPUT_DATA</span>
 </pre></div>
 </div>
 </div>
@@ -392,13 +415,13 @@ interpret <span class="se">\</span>
 <h2>6. Discover motifs with TF-modisco<a class="headerlink" href="#discover-motifs-with-tf-modisco" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MODISCO_PROFILE_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/modisco_profile
 mkdir <span class="nv">$MODISCO_PROFILE_DIR</span>
-modisco <span class="se">\</span>
+motif_discovery <span class="se">\</span>
     ---scores-path <span class="nv">$INTERPRET_DIR</span>/&lt;path to profile scores file&gt; <span class="se">\</span>
     --output-directory <span class="nv">$MODISCO_PROFILE_DIR</span>
 
 <span class="nv">MODISCO_COUNTS_DIR</span><span class="o">=</span><span class="nv">$BASE_DIR</span>/modisco_counts
 mkdir <span class="nv">$MODISCO_COUNTS_DIR</span>
-modisco <span class="se">\</span>
+motif_discovery <span class="se">\</span>
     ---scores-path <span class="nv">$INTERPRET_DIR</span>/&lt;path to counts scores file&gt; <span class="se">\</span>
     --output-directory <span class="nv">$MODISCO_COUNTS_DIR</span>
 </pre></div>

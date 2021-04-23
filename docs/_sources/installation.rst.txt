@@ -23,5 +23,5 @@ Create a new virtual environment and activate it as shown below
 -------------------------
 .. code-block:: bash
 
-    pip install --no-cache-dir --ignore-installed git+https://github.com/kundajelab/basepairmodels.git
+    pip install git+https://github.com/kundajelab/basepairmodels.git
 

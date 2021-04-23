@@ -184,7 +184,7 @@ conv layer rather than to ALL subsequent conv layers.</p>
 </div></blockquote>
 <dl class="py function">
 <dt id="basepairmodels.common.model_archs.BPNet">
-<code class="sig-prename descclassname">basepairmodels.common.model_archs.</code><code class="sig-name descname">BPNet</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_seq_len</span></em>, <em class="sig-param"><span class="n">output_len</span></em>, <em class="sig-param"><span class="n">num_bias_profiles</span></em>, <em class="sig-param"><span class="n">filters</span><span class="o">=</span><span class="default_value">64</span></em>, <em class="sig-param"><span class="n">num_dilation_layers</span><span class="o">=</span><span class="default_value">9</span></em>, <em class="sig-param"><span class="n">conv1_kernel_size</span><span class="o">=</span><span class="default_value">21</span></em>, <em class="sig-param"><span class="n">dilation_kernel_size</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">profile_kernel_size</span><span class="o">=</span><span class="default_value">25</span></em>, <em class="sig-param"><span class="n">num_tasks</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.model_archs.BPNet" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">basepairmodels.common.model_archs.</code><code class="sig-name descname">BPNet</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_seq_len</span></em>, <em class="sig-param"><span class="n">output_len</span></em>, <em class="sig-param"><span class="n">num_bias_profiles</span></em>, <em class="sig-param"><span class="n">filters</span><span class="o">=</span><span class="default_value">64</span></em>, <em class="sig-param"><span class="n">num_dilation_layers</span><span class="o">=</span><span class="default_value">9</span></em>, <em class="sig-param"><span class="n">conv1_kernel_size</span><span class="o">=</span><span class="default_value">21</span></em>, <em class="sig-param"><span class="n">dilation_kernel_size</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">profile_kernel_size</span><span class="o">=</span><span class="default_value">75</span></em>, <em class="sig-param"><span class="n">num_tasks</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.model_archs.BPNet" title="Permalink to this definition">¶</a></dt>
 <dd><p>BPNet model architecture as described in the BPNet paper
 <a class="reference external" href="https://www.biorxiv.org/content/10.1101/737981v1.full.pdf">https://www.biorxiv.org/content/10.1101/737981v1.full.pdf</a></p>
 <dl class="field-list simple">
@@ -280,7 +280,7 @@ convolution of the profile head branch of the network</p></li>
 
 <dl class="py function">
 <dt id="basepairmodels.common.model_archs.BPNetSumAll">
-<code class="sig-prename descclassname">basepairmodels.common.model_archs.</code><code class="sig-name descname">BPNetSumAll</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_seq_len</span></em>, <em class="sig-param"><span class="n">output_len</span></em>, <em class="sig-param"><span class="n">num_bias_profiles</span></em>, <em class="sig-param"><span class="n">filters</span><span class="o">=</span><span class="default_value">64</span></em>, <em class="sig-param"><span class="n">num_dilation_layers</span><span class="o">=</span><span class="default_value">9</span></em>, <em class="sig-param"><span class="n">conv1_kernel_size</span><span class="o">=</span><span class="default_value">21</span></em>, <em class="sig-param"><span class="n">dilation_kernel_size</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">profile_kernel_size</span><span class="o">=</span><span class="default_value">25</span></em>, <em class="sig-param"><span class="n">num_tasks</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.model_archs.BPNetSumAll" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">basepairmodels.common.model_archs.</code><code class="sig-name descname">BPNetSumAll</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_seq_len</span></em>, <em class="sig-param"><span class="n">output_len</span></em>, <em class="sig-param"><span class="n">num_bias_profiles</span></em>, <em class="sig-param"><span class="n">filters</span><span class="o">=</span><span class="default_value">64</span></em>, <em class="sig-param"><span class="n">num_dilation_layers</span><span class="o">=</span><span class="default_value">9</span></em>, <em class="sig-param"><span class="n">conv1_kernel_size</span><span class="o">=</span><span class="default_value">21</span></em>, <em class="sig-param"><span class="n">dilation_kernel_size</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">profile_kernel_size</span><span class="o">=</span><span class="default_value">75</span></em>, <em class="sig-param"><span class="n">num_tasks</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.model_archs.BPNetSumAll" title="Permalink to this definition">¶</a></dt>
 <dd><p>A variation of BPNet in which each convolutional layer is added
 to all subsequent convolutional layers. In the paper version
 each conv layer is added only to the subsequent conv layer
@@ -318,7 +318,7 @@ convolution of the profile head branch of the network</p></li>
 <p>This module contains functions to</p>
 <dl class="py function">
 <dt id="basepairmodels.common.stats.get_recommended_counts_loss_weight">
-<code class="sig-prename descclassname">basepairmodels.common.stats.</code><code class="sig-name descname">get_recommended_counts_loss_weight</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_bigwigs</span></em>, <em class="sig-param"><span class="n">training_intervals</span></em>, <em class="sig-param"><span class="n">alpha</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.stats.get_recommended_counts_loss_weight" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">basepairmodels.common.stats.</code><code class="sig-name descname">get_recommended_counts_loss_weight</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_bigWigs</span></em>, <em class="sig-param"><span class="n">peaks</span></em>, <em class="sig-param"><span class="n">alpha</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#basepairmodels.common.stats.get_recommended_counts_loss_weight" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function computes the hyper parameter lambda (l) as
 suggested in the BPNet paper on pg. 28
 <a class="reference external" href="https://www.biorxiv.org/content/10.1101/737981v2.full.pdf">https://www.biorxiv.org/content/10.1101/737981v2.full.pdf</a></p>
@@ -332,12 +332,12 @@ predictions as shown below</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>input_bigwigs</strong> (<em>list</em>) – list of bigwig files with assay
+<li><p><strong>input_bigWigs</strong> (<em>list</em>) – list of bigWig files with assay
 signal. n_obs will computed as a global average
-across all the input bigwigs</p></li>
-<li><p><strong>training_intervals</strong> (<em>pandas.Dataframe</em>) – 3 column dataframe
-with ‘chrom’, ‘start’ and ‘end’ columns, representing
-range [start, end) for the spans of interest</p></li>
+across all the input bigWigs</p></li>
+<li><p><strong>peaks</strong> (<em>list</em>) – list 3 column pandas dataframes,
+with ‘chrom’, ‘start’ and ‘end’ columns,
+corresponding to each input bigWig</p></li>
 <li><p><strong>alpha</strong> (<em>float</em>) – parameter to scale profile loss relative
 to the counts loss. A value &lt; 1.0 will upweight the
 profile loss</p></li>

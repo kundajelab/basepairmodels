@@ -18,6 +18,14 @@ predict
     :func: predict_argsparser
     :prog: predict
 
+bounds
+===========
+
+.. argparse::
+    :module: basepairmodels.cli.bounds
+    :func: bounds_argsparser
+    :prog: bounds
+
 metrics
 =======
 
@@ -26,23 +34,23 @@ metrics
     :func: metrics_argsparser
     :prog: metrics
 
-interpret
+shap_scores
 =========
 
 .. argparse::
     :module: basepairmodels.cli.argparsers
-    :func: interpret_argsparser
-    :prog: interpret
+    :func: shap_scores_argsparser
+    :prog: shap_scores
 
-run_modisco
+motif_discovery
 ===========
 
 .. argparse::
     :module: basepairmodels.cli.argparsers
-    :func: modisco_argsparser
-    :prog: run_modisco
+    :func: motif_discovery_argsparser
+    :prog: motif_discovery
 
-logit2profile
+logits2profile
 ===========
 
 .. argparse::
@@ -50,13 +58,6 @@ logit2profile
     :func: logits2profile_argsparser
     :prog: logits2profile
 
-bounds
-===========
-
-.. argparse::
-    :module: basepairmodels.cli.bounds
-    :func: bounds_argsparser
-    :prog: bounds
 
 embeddings
 ===========
