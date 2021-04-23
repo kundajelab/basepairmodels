@@ -20,7 +20,7 @@ conda activate basepairmodels
 ### 3. Install basepairmodels
 
 ```
-pip install --no-cache-dir --ignore-installed git+https://github.com/kundajelab/basepairmodels.git
+pip install git+https://github.com/kundajelab/basepairmodels.git
 ```
 
 
@@ -192,19 +192,24 @@ INPUT_DATA=$BASE_DIR/input_data.json
 
 mkdir $MODEL_DIR
 train \
-    --output-dir $MODEL_DIR \
-    --splits $CV_SPLITS \
     --input-data $INPUT_DATA \
-    --chrom-sizes $CHROM_SIZES \
+    --stranded \
+    --has-control \
+    --output-dir $MODEL_DIR \
     --reference-genome $REFERENCE_GENOME \
+    --chroms $(paste -s -d ' ' $reference_dir/hg38_chroms.txt) \
+    --chrom-sizes $CHROM_SIZES \
+    --splits $CV_SPLITS \
+    --model-arch-name BPNet1000d8 \
+    --sequence-generator-name BPNet \
+    --model-output-filename model \
+    --input-seq-len 2114 \
+    --output-len 1000 \
+    --filters 64 \
+    --shuffle \
     --threads 10 \
     --epochs 100 \
-    --sampling-mode peaks \
-    --chroms $(cat ${REFERENCE_DIR}/hg38_chroms.txt) \
-    --has-control \
-    --stranded \
-    --automate-filenames \
-    --model-arch-name BPNet
+    --learning-rate 0.004
 ```
 
 The `splits.json` file contains information about the chromosomes that are used for validation and test. Here is a sample that contains one split.
@@ -239,37 +244,59 @@ predict \
     --write-buffer-size 2000 \
     --batch-size 1 \
     --has-control \
-    --stranded \
-    --automate-filenames
+    --stranded \    
+    --input-seq-len 2114 \
+    --output-len 1000 \
+    --output-window-size 1000
 ```
 
-
-
 ### 4. Compute metrics
+
+To compute metrics first compute the min max bounds for each peak individually, and on both the plus and minus strands. This can be done by a single command as follows:
+
+```
+BOUNDS_DIR=$BASE_DIR/bounds
+mkdir $METRICS_DIR
+bounds \
+    --input-profiles $DATA_DIR/plus.bw $DATA_DIR/minus.bw \
+    --output-names task0_plus task0_minus \
+    --output-directory $BOUNDS_DIR \
+    --peaks $DATA_DIR/peaks.bed \
+    --chroms chr1
+```
+
+Now compute metrics on the `plus` and `minus` strand separately using the following command
 
 ```
 METRICS_DIR=$BASE_DIR/metrics
 mkdir $METRICS_DIR
 metrics \
-   -A [path to training bigwig] \
-   -B [path to predictions bigwig] \
+   -A [path to profile training bigwig] \
+   -B [path to profile predictions bigwig] \
    --peaks $DATA_DIR/peaks.bed \
    --chroms chr1 \
    --output-dir $METRICS_DIR \
+   --apply-softmax-to-profileB \
+   --countsB [path to exponentiated counts predictions bigWig] \
    --chrom-sizes $CHROM_SIZES
 ```
 
 ### 5. Compute importance scores
 
 ```
-INTERPRET_DIR=$BASE_DIR/interpretations
-mkdir $INTERPRET_DIR
-interpret \
+SHAP_DIR=$BASE_DIR/shap
+mkdir $SHAP_DIR
+shap_scores \
     --reference-genome $REFERENCE_GENOME \
     --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
     --bed-file $DATA_DIR/peaks.bed \
     --chroms chr1 \
-    --output-dir $INTERPRET_DIR \
+    --output-dir $SHAP_DIR \
+    --input-seq-len 2114 \
+    --control-len 1000 \
+    --control-smoothing 7.0 81 \
+    --task-id 0 \
+    --control-info $INPUT_DATA
 ```
 
 ### 6. Discover motifs with TF-modisco
@@ -277,13 +304,13 @@ interpret \
 ```
 MODISCO_PROFILE_DIR=$BASE_DIR/modisco_profile
 mkdir $MODISCO_PROFILE_DIR
-modisco \
+motif_discovery \
     ---scores-path $INTERPRET_DIR/<path to profile scores file> \
     --output-directory $MODISCO_PROFILE_DIR
 
 MODISCO_COUNTS_DIR=$BASE_DIR/modisco_counts
 mkdir $MODISCO_COUNTS_DIR
-modisco \ 
+motif_discovery \ 
     ---scores-path $INTERPRET_DIR/<path to counts scores file> \
     --output-directory $MODISCO_COUNTS_DIR
 ```
