@@ -19,7 +19,7 @@ setup(
                      "deepdish", "pandas", "matplotlib", "plotly", 
                      "deeptools", "pyfaidx", "modisco", "deeplift", "tqdm",
                      "shap @ git+https://github.com/AvantiShri/shap.git", 
-                     "mseqgen @ git+https://github.com/kundajelab/mseqgen.git"],
+                     "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@v0.1.0"],
    extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
     zip_safe=False,
