@@ -118,8 +118,7 @@ def training_argsparser():
 
     parser.add_argument('--reverse-complement-augmentation', 
                         action='store_true', 
-                        help="enable reverse complement augmentation", 
-                        default=True)
+                        help="enable reverse complement augmentation")
     
     parser.add_argument('--negative-sampling-rate', type=float,
                         help="number of negatives to sample for every "
