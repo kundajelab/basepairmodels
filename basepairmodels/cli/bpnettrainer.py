@@ -30,29 +30,17 @@
 """
 
 
-from basepairmodels.cli import argparsers
 import json
 import logging
-import multiprocessing as mp
 import os
 import sys
 
-stderr = sys.stderr
-sys.stderr = open('keras.stderr', 'w')
+from basepairmodels.cli import argparsers
 from basepairmodels.common import model_archs, training
-sys.stderr = stderr
 from mseqgen import quietexception
 
 
 def main():
-    # change the way processes are started, default = 'fork'
-    # had to do this to prevent Keras multi gpu from deadlocking
-    mp.set_start_method('forkserver')
-    
-    # inform user of the keras stderr log file
-    logging.warning("For all keras related error logs refer to "
-                    "keras.stderr in your local directory")
-
     # parse the command line arguments
     parser = argparsers.training_argsparser()
     args = parser.parse_args()
@@ -99,6 +87,8 @@ def main():
     hyper_params['early_stopping_min_delta'] = args.early_stopping_min_delta
     hyper_params['reduce_lr_on_plateau_patience'] = \
         args.reduce_lr_on_plateau_patience
+    hyper_params['lr_reduction_factor'] = \
+        args.lr_reduction_factor
     
     # parallelization parms
     parallelization_params = {}

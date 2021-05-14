@@ -50,7 +50,6 @@ import time
 import warnings
 
 from basepairmodels.common import model_archs
-from basepairmodels.cli.batchgenutils import *
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli import experiments
