@@ -30,7 +30,11 @@ def training_argsparser():
     parser.add_argument('--reduce-lr-on-plateau-patience', type=int, 
                         help="patience value for ReduceLROnPlateau callback", 
                         default=2)
-    
+
+    parser.add_argument('--lr-reduction-factor', type=float, 
+                        help="factor by which the learning rate will be "
+                        "reduced", default=0.5)
+
     # model params
     # TODO - might want to yaml just the model params 
     # the arguments here are specific to BPNet
@@ -164,6 +168,14 @@ def predict_argsparser():
 
     parser.add_argument('--output-len', type=int, 
                         help="length of output profile", default=1000)
+    
+    parser.add_argument('--sequence-generator-name', type=str,
+                        help="the name of the sequence generator from "
+                        "mseqgen library that will be used to generate "
+                        "batches of data ", default='BPNet')
+
+    # network params     
+    parser.add_argument('--control-smoothing', default=[[7.5, 80]])
     
     # predict modes
     parser.add_argument('--predict-peaks', action='store_true', 

@@ -39,31 +39,103 @@
 """
 
 
-import sys
-
-stderr = sys.stderr
-sys.stderr = open('keras.stderr', 'w')
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from keras.utils import multi_gpu_model
-from keras.optimizers import Adam
-from basepairmodels.common import model_archs
-sys.stderr = stderr
-
-from basepairmodels.cli.batchgenutils import *
-from basepairmodels.cli.bpnetutils import *
-from basepairmodels.cli.callbacks import BatchController, TimeHistory
-from basepairmodels.cli.losses import MultichannelMultinomialNLL
-from basepairmodels.cli import experiments
-from basepairmodels.cli import logger
-from mseqgen import generators 
-
 import copy
 import datetime
 import json
 import multiprocessing as mp
 import pandas as pd
+import sys
+import tensorflow.keras.backend as kb
 import time
 import warnings
+
+from basepairmodels.common import model_archs
+from basepairmodels.cli.batchgenutils import *
+from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.losses import MultichannelMultinomialNLL
+from basepairmodels.cli import experiments
+from basepairmodels.cli import logger
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
+from mseqgen import generators 
+
+
+def early_stopping_check(losses, patience=5, min_delta=1e-3):
+    """
+        Function to check if early stopping criteria are met
+        
+        Args:
+            losses (list): list of all losses in order of the epochs,
+                these could be training or validation losses
+            patience (int): the number of epochs with no improvement
+                greater than `min_delta`
+            min_delta (float): The smallest amount that signals  
+                sufficienct decrease in validation loss to justify
+                continuation of training for a further #patience
+                epochs
+                
+        Returns:
+            bool: True, if early stopping criteria are satisfied, 
+                False otherwise
+    """
+    
+    # if sufficient number of epochs have not elapsed yet
+    if len(losses) <= patience:
+        return False
+    
+    # the loss value upon which the patience check will be performed
+    anchor_loss = losses[-(patience+1)]
+    
+    for i in range(patience):
+        if (anchor_loss - losses[i-patience]) > min_delta:
+            return False
+    
+    return True
+
+    
+def reduce_lr_on_plateau(losses, current_lr, factor=0.5, patience=2, 
+                         min_lr=1e-4):
+    """
+        Function to compute the new learning rate if loss is
+        plateauing 
+        
+        Args:
+            losses (list): list of all losses in order of the epochs,
+                these could be training or validation losses
+            current_lr (float): current learning rate
+            factor (float): the factor by which the learning rate is
+                to be reduced in case the plateau criteria is met
+            patience (int): number of epochs with no improvement after 
+                which learning rate will be reduced.
+            min_lr (float): lower bound on the learning rate
+                
+        Returns:
+            float: new learning rate
+                
+    """
+    
+    # if sufficient number of epochs have not elapsed yet 
+    if len(losses) <= patience:
+        return current_lr
+    
+    # the loss value upon which the patience check will be performed
+    anchor_loss = losses[-(patience+1)]
+    
+    for i in range(patience):
+        # improvement found
+        if losses[i-patience] < anchor_loss:
+            # no change in learning rate
+            return current_lr
+    
+    # new learning rate
+    new_lr = current_lr * factor
+    
+    # check if it's below lower bound
+    if new_lr < min_lr:
+        return current_lr
+    
+    return new_lr
+
 
 def train_and_validate(input_params, output_params, genome_params, 
                        batch_gen_params, hyper_params, parallelization_params, 
@@ -154,30 +226,23 @@ def train_and_validate(input_params, output_params, genome_params,
                                epochs=hyper_params['epochs'], 
                                batch_size=hyper_params['batch_size'])
 
-    # training generator function that will be passed to 
-    # fit_generator
-    train_generator = train_gen.gen()
 
     # instantiate the batch generator class for validation
     val_gen = BatchGenerator(input_params, val_batch_gen_params, 
-                                 network_params,
+                             network_params,
                              genome_params['reference_genome'], 
                              genome_params['chrom_sizes'],
                              val_chroms, 
                              num_threads=parallelization_params['threads'],
                              epochs=hyper_params['epochs'], 
                              batch_size=hyper_params['batch_size'])
-    
-    # validation generator function that will be passed to 
-    # fit_generator
-    val_generator = val_gen.gen()
 
     # lets make sure the sizes look reasonable
     logging.info("TRAINING SIZE - {}".format(train_gen._samples.shape))
     logging.info("VALIDATION SIZE - {}".format(val_gen._samples.shape))
 
     # we need to calculate the number of training steps and 
-    # validation steps in each epoch, fit_generator requires this
+    # validation steps in each epoch, fit/evaluate requires this
     # to determine the end of an epoch
     train_steps = train_gen.len()
     val_steps = val_gen.len()
@@ -187,29 +252,6 @@ def train_and_validate(input_params, output_params, genome_params,
     # check if these numbers will be 0
     logging.info("TRAINING STEPS - {}".format(train_steps))
     logging.info("VALIDATION STEPS - {}".format(val_steps))
-  
-    # Here we specify all our callbacks
-    # 1. Early stopping if validation loss doesn't decrease
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, 
-                       patience=hyper_params['early_stopping_patience'],
-                       min_delta=hyper_params['early_stopping_min_delta'], 
-                       restore_best_weights=True)
-
-    # 2. Reduce learning rate if validation loss is plateuing
-    reduce_lr = ReduceLROnPlateau(
-        monitor='val_loss', factor=0.5, 
-        patience=hyper_params['reduce_lr_on_plateau_patience'], 
-        min_lr=hyper_params['min_learning_rate'])
-
-    # 3. Timing hook to record start, end & elapsed time for each 
-    # epoch
-    time_tracker = TimeHistory()
-
-    # 4. Batch controller callbacks to ensure that batches are 
-    # generated only on a per epoch basis, also ensures graceful
-    # termination of the batch generation 
-    train_batch_controller = BatchController(train_gen)
-    val_batch_controller = BatchController(val_gen)
 
     # get an instance of the model
     logging.debug("New {} model".format(network_params['name']))
@@ -220,16 +262,18 @@ def train_and_validate(input_params, output_params, genome_params,
                       filters=network_params['filters'], 
                       num_tasks=train_gen._num_tasks)
     
+    # print out the model summary
     model.summary()
 
-    # if running in multi gpu mode
-    if parallelization_params['gpus'] > 1:
-        logging.debug("Multi GPU model")
-        model = multi_gpu_model(model, gpus=parallelization_params['gpus'])
+#     # if running in multi gpu mode
+#     if parallelization_params['gpus'] > 1:
+#         logging.debug("Multi GPU model")
+#         model = multi_gpu_model(model, gpus=parallelization_params['gpus'])
 
     # compile the model
     logging.debug("Compiling model")
-    logging.info("counts_loss_weight - {}".format(network_params['counts_loss_weight']))
+    logging.info("counts_loss_weight - {}".format(
+        network_params['counts_loss_weight']))
     model.compile(Adam(lr=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
                         train_gen._num_tasks), 'mse'], 
@@ -238,41 +282,92 @@ def train_and_validate(input_params, output_params, genome_params,
     # begin time for training
     t1 = time.time()
 
+    # track validation losses for early stopping and learning rate
+    # updates
+    val_losses = []
+    
+    # track best loss so we can restore weights 
+    best_loss = 1e6
+    
+    # keep a copy of the best weights
+    best_weights = None
+    
+    # the epoch with the best validation loss
+    best_epoch = 1
+    
     # start training
     logging.debug("Training started ...")
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        history = model.fit_generator(train_generator, 
-                                      validation_data=val_generator,
-                                      epochs=hyper_params['epochs'], 
-                                      steps_per_epoch=train_steps, 
-                                      validation_steps=val_steps, 
-                                      callbacks=[es, reduce_lr, time_tracker,
-                                                 train_batch_controller,
-                                                 val_batch_controller])
+    for epoch in range(hyper_params['epochs']):
+        # First, let's train for one epoch
+        logging.info("Training Epoch {}".format(epoch + 1))
+        train_start_time = time.time()
+        # training generator function that will be passed to fit
+        train_generator = train_gen.gen(epoch)
+        model.fit(train_generator, epochs=1, steps_per_epoch=train_steps)
+        train_end_time = time.time()
+        
+        # Then, we evaluate on the validation set
+        logging.info("Validation Epoch {}".format(epoch + 1))
+        val_start_time = time.time()
+        # validation generator function that will be passed to evaluate 
+        val_generator = val_gen.gen(epoch)
+        val_loss = model.evaluate(
+            val_generator, steps=val_steps, return_dict=True)
+        val_losses.append(val_loss['loss'])
+        val_end_time = time.time()
+        
+        # update best weights and loss 
+        if val_loss['loss'] < best_loss:
+            best_weights = model.get_weights()
+            best_loss = val_loss['loss']
+            best_epoch = epoch + 1
+        
+        # check if early stopping criteria are satisfied
+        if early_stopping_check(
+            val_losses,
+            patience=hyper_params['early_stopping_patience'],
+            min_delta=hyper_params['early_stopping_min_delta']):
+            
+            # restore best weights
+            logging.info("Restoring best weights from epoch {}".format(
+                best_epoch))
+            model.set_weights(best_weights)
+            break
+
+        # lower learning rate if criteria are satisfied
+        new_lr = reduce_lr_on_plateau(
+            val_losses,
+            model.optimizer.learning_rate,
+            factor=hyper_params['lr_reduction_factor'], 
+            patience=hyper_params['reduce_lr_on_plateau_patience'],
+            min_lr=hyper_params['min_learning_rate'])
+        
+        # set the new learning rate
+        model.optimizer.lr.assign(new_lr)
+
+        # display current learning rate and training status
+        logging.info("Current learning rate - {}, Stop Training - {}".format(
+            model.optimizer.learning_rate, model.stop_training))
 
     # end time for training
     t2 = time.time() 
     logging.info("Total Elapsed Time: {}".format(t2-t1))
 
-    # send the stop signal to the generators
-    train_gen.set_stop()
-    val_gen.set_stop()
-      
     # base model filename
     if output_params['automate_filenames']:
         # get random alphanumeric tag for model
         model_tag = getAlphaNumericTag(output_params['tag_length'])
         model_fname = "{}/{}".format(model_dir, model_tag)
-
     elif output_params['model_output_filename'] is not None:
         model_fname = "{}/{}".format(model_dir, 
                                      output_params['model_output_filename'])
     else:
         model_fname = "{}/model".format(model_dir)
+    
     # add suffix tag to model name
     if suffix_tag is not None:
         model_fname += "_{}".format(suffix_tag)
+    
     # extension
     model_fname += ".h5"
 
@@ -280,24 +375,24 @@ def train_and_validate(input_params, output_params, genome_params,
     model.save(model_fname)
     logging.info("Finished saving model: {}".format(model_fname))
 
-    # save history to json:  
-    # Step 1. create a custom history object with a new key for 
-    # epoch times
-    custom_history = copy.deepcopy(history.history)
-    custom_history['times'] = time_tracker.times
+#     # save history to json:  
+#     # Step 1. create a custom history object with a new key for 
+#     # epoch times
+#     custom_history = copy.deepcopy(history.history)
+#     custom_history['times'] = time_tracker.times
 
-    # Step 2. convert the custom history dict to a pandas DataFrame:  
-    hist_df = pd.DataFrame(custom_history) 
+#     # Step 2. convert the custom history dict to a pandas DataFrame:  
+#     hist_df = pd.DataFrame(custom_history) 
 
-    # file name for json file
-    hist_json = model_fname.replace('.h5', '.history.json')
+#     # file name for json file
+#     hist_json = model_fname.replace('.h5', '.history.json')
 
-    # Step 3. write the dataframe to json
-    with open(hist_json, mode='w') as f:
-        hist_df.to_json(f)
+#     # Step 3. write the dataframe to json
+#     with open(hist_json, mode='w') as f:
+#         hist_df.to_json(f)
     
-    logging.info("Finished saving training and validation history: {}".format(
-        hist_json))
+#     logging.info("Finished saving training and validation history: {}".format(
+#         hist_json))
 
     # write all the command line arguments to a json file
     # & include the number of epochs the training lasted for, and the
@@ -320,8 +415,10 @@ def train_and_validate(input_params, output_params, genome_params,
         config['network_params'] = network_params
         
         # the number of epochs the training lasted
-        epochs = len(history.history['val_loss'])
-        config['training_epochs'] = epochs
+        config['training_epochs'] = epoch + 1
+
+        # the epoch with best validation loss
+        config['best_epoch'] = best_epoch 
         
         config['train_chroms'] = train_chroms
         config['val_chroms'] = val_chroms

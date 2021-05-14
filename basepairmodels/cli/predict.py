@@ -1,74 +1,101 @@
-import time
+"""
+    Python script for network training via the CLI
+
+    License:
+    
+    MIT License
+
+    Copyright (c) 2021 Kundaje Lab
+
+    Permission is hereby granted, free of charge, to any person 
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without 
+    restriction, including without limitation the rights to use, copy,
+    modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be 
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+    BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+    ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+"""
+
+
 import datetime
 import json
+import logging
+import numpy as np
 import os
 import pandas as pd
 import sys
+import time
 
 from basepairmodels.cli import argparsers
 from basepairmodels.cli import bigwigutils
 from basepairmodels.cli import logger
-from basepairmodels.cli import MTBatchGenerator
-
-from basepairmodels.cli.batchgenutils import *
-from basepairmodels.cli.bpnetutils import *
-from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
-
-from keras.models import load_model
-from keras.utils import CustomObjectScope
+from basepairmodels.cli.losses import MultichannelMultinomialNLL
+from basepairmodels.cli.losses import multinomial_nll
 from mseqgen import quietexception
+from mseqgen import generators
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import CustomObjectScope
 from tqdm import tqdm
 
 def predict(args, input_data, pred_dir):    
     # load the model
     model = load_model(args.model)
 
+    # input params
+    input_params = {}
+    input_params['data'] = args.input_data
+    input_params['stranded'] = args.stranded
+    input_params['has_control'] = args.has_control
+
+    # network params
+    network_params = {}
+    network_params['control_smoothing'] = args.control_smoothing
+    
     # parameters that are specific to the batch generation process.
     # for prediction we dont use jitter, reverse complement 
     # augmentation and negative sampling
-    batchgen_params = {'seq_len': args.input_seq_len,
-                       'output_len': args.output_len,
-                       'jitter': 0, 
-                       'rev_comp_aug': False,
-                       'negative_sampling_rate': 0.0}
+    batch_gen_params = {
+        'sequence_generator_name': args.sequence_generator_name,
+        'input_seq_len': args.input_seq_len,
+        'output_len': args.output_len,
+        'sampling_mode': 'peaks',
+        'shuffle': False,
+        'max_jitter': 0, 
+        'rev_comp_aug': False,
+        'negative_sampling_rate': 0.0, 
+        'mode': 'test'}
     
-    if args.predict_peaks:
-        # get a pandas dataframe of just the peaks for the test data
-        test_data = getPeakPositions(input_data, args.chroms, 
-                                     args.chrom_sizes, args.input_seq_len // 2, 
-                                     drop_duplicates=True, 
-                                     sort_across_tasks=True)
-        
-        if args.batch_size > 1:
-            num_omit_batches = len(test_data.index) % args.batch_size
-            logging.warning("Since you have a chosen a batch size {} > 1 "
-                            "the last {} peaks will not be predicted "
-                            "because of batch size mismatch. To predict "
-                            "all peak positions use a batch size "
-                            " of 1".format(args.batch_size, num_omit_batches))
-    else:
-        # get a pandas dataframe for the test data with
-        # sequential positions at equal intervals
-        test_data = getChromPositions(args.chroms, args.chrom_sizes, 
-                                      args.input_seq_len // 2, 
-                                      mode='sequential', 
-                                      num_positions=-1, 
-                                      step=args.output_window_size)
+    # get the corresponding batch generator class
+    sequence_generator_class_name = generators.find_generator_by_name(
+        batch_gen_params['sequence_generator_name'])
+    logging.info("SEQGEN Class Name: {}".format(sequence_generator_class_name))
+    BatchGenerator = getattr(generators, sequence_generator_class_name)
 
-    logging.info("Test chroms {}".format(args.chroms))
-    logging.info("Test data size {}".format(test_data.shape))
-
-    # instantiate the batch generator class for testing
-    BatchGenerator = getattr(MTBatchGenerator, 
-                             'MT{}BatchGenerator'.format(args.model_name))
-    test_gen = BatchGenerator(input_data, args.reference_genome, 
-                              args.chrom_sizes, args.chroms, batchgen_params, 
-                              "test_gen", num_threads=1, epochs=1, 
-                              batch_size=args.batch_size, shuffle=False,
-                              mode='test')
-
+    # instantiate the batch generator class for training
+    test_gen = BatchGenerator(input_params, batch_gen_params, 
+                               network_params, 
+                               args.reference_genome, 
+                               args.chrom_sizes,
+                               args.chroms, 
+                               num_threads=1,
+                               epochs=1, 
+                               batch_size=args.batch_size)
+    
     # testing generator function
-    test_generator = test_gen.gen(test_data)
+    test_generator = test_gen.gen(1)
 
     # begin time for training
     t1 = time.time()
@@ -107,11 +134,11 @@ def predict(args, input_data, pred_dir):
             ['chrom', 'starts', 'ends'])
     
     # total number of batches that will be generated
-    num_batches = test_data.shape[0] // args.batch_size
+    num_batches = test_gen.len()
 
     # run predict on each batch separately
     cnt_batches = 0
-    for coordinates, batch in tqdm(
+    for coordinates, _, batch in tqdm(
         test_generator, desc='batch', total=num_batches):
 
         # predict on the batch
@@ -267,19 +294,12 @@ def predict(args, input_data, pred_dir):
                 counts_write_buffers[j] = counts_write_buffers[j].drop(
                     index=counts_write_index)
 
-        if cnt_batches == num_batches:
-            break
-
     # close bigWig files
     for file_obj in profile_fileobjs:
         file_obj.close()
     for file_obj in counts_fileobjs:
         file_obj.close()
 
-    # gracefully terminate when prediction on all batches is complete
-    # send the stop signal to the generators
-    test_gen.set_stop()
-    
     # end time for training
     t2 = time.time() 
     logging.info('Total Elapsed Time: {} secs'.format(t2-t1))
