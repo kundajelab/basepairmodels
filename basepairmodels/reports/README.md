@@ -2,6 +2,23 @@
 
 This directory contains Jupyter Notebooks and scripts needed to generate motif reports.
 
+### Library dependencies
+These are the libraries needed. You can probably get away with different versions for some of these, but these are the versions used for development:
+- h5py 2.10.0
+- Jupyter notebook 6.0.3
+- NumPy 1.18.5
+- MatPlotLib 3.3.1
+- MEME 5.0.1 (specifically for TOMTOM)
+- [MOODS](https://github.com/jhkorhonen/MOODS/wiki/Getting-started) 1.9.4.1
+- Pandas 1.1.1
+- [Pomegranate](https://pomegranate.readthedocs.io/en/latest/index.html) 0.14.2
+- SciPy 1.5.2
+- sklearn 0.23.2
+- [TF-MoDISco](https://github.com/kundajelab/tfmodisco) 0.5.14.1
+- tqdm 4.48.2
+- [UMAP](https://umap-learn.readthedocs.io/en/latest/index.html) 0.5.1
+- [VDOM](https://github.com/nteract/vdom) 0.6
+
 ### `view_tfmodisco_results.ipynb`
 Visualizes the TF-MoDISco motifs, including:
 - PFM, PWM, CWM, and hCWM of each discovered motif
