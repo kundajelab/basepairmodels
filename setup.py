@@ -12,7 +12,7 @@ setup(
     author_email="zahoor@stanford.edu",
     url="https://github.com/kundajelab/basepairmodels",
     packages=find_packages(exclude=["docs", "docs-build"]),
-    install_requires=["tensorflow-gpu==2.4.1", "tensorflow-probability", "tqdm",
+    install_requires=["tensorflow-gpu==2.4.0", "tensorflow-probability", "tqdm",
                       "scikit-learn", "scipy", "scikit-image", "scikit-learn", 
                       "numpy", "deepdish", "pandas", "matplotlib", "plotly", 
                       "deeptools", "pyfaidx", "modisco==0.5.14.1", "deeplift", 
