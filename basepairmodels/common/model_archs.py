@@ -15,8 +15,8 @@
 
 
 """
-from keras import layers, models
-from keras.backend import int_shape
+from tensorflow.keras import layers, models
+from tensorflow.keras.backend import int_shape
 
 def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64, 
                 num_dilation_layers=9, conv1_kernel_size=21, 
