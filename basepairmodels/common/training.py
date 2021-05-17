@@ -42,7 +42,9 @@
 import copy
 import datetime
 import json
+import logging
 import multiprocessing as mp
+import os
 import pandas as pd
 import sys
 import tensorflow.keras.backend as kb
@@ -273,7 +275,7 @@ def train_and_validate(input_params, output_params, genome_params,
     logging.debug("Compiling model")
     logging.info("counts_loss_weight - {}".format(
         network_params['counts_loss_weight']))
-    model.compile(Adam(lr=hyper_params['learning_rate']),
+    model.compile(Adam(learning_rate=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
                         train_gen._num_tasks), 'mse'], 
                     loss_weights=[1, network_params['counts_loss_weight']])
