@@ -39,14 +39,11 @@ import sys
 
 from basepairmodels.cli.argparsers import bounds_argsparser
 from basepairmodels.cli.metrics import mnll, profile_cross_entropy
-
 from mseqgen import quietexception
-
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
 from scipy.special import logsumexp
 from scipy.stats import pearsonr, spearmanr, multinomial
-
 from tqdm import tqdm
         
 

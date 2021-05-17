@@ -1,21 +1,19 @@
-from basepairmodels.cli.argparsers import metrics_argsparser
-from basepairmodels.cli.batchgenutils import *
-from basepairmodels.cli.bpnetutils import *
-from basepairmodels.cli.logger import *
-
-
-from mseqgen import quietexception
-
 import json
 import numpy as np
 import pandas as pd
 import pyBigWig
 
+from basepairmodels.cli.argparsers import metrics_argsparser
+from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.logger import *
+from mseqgen import quietexception
+from mseqgen.sequtils import getChromPositions
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
 from scipy.stats import pearsonr, spearmanr, multinomial
 from scipy.special import logsumexp
 from tqdm import tqdm
+
 
 def mnll(true_counts, logits=None, probs=None):
     """
@@ -239,9 +237,9 @@ def metrics_main():
         
         allPositions = getChromPositions(args.chroms, args.chrom_sizes, 
                                          args.metrics_seq_len // 2, 
-                                         args.step_size, mode='sequential',
-                                         num_positions=-1)
-               
+                                         mode='sequential',
+                                         num_positions=-1, step=args.step_size)
+
     # check that there are exactly the same number of rows in the 
     # bounds dataframe as compared to allPositions
     if bounds_df is not None and (bounds_df.shape[0] != allPositions.shape[0]):
