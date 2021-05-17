@@ -5,22 +5,20 @@ import pandas as pd
 import pyBigWig
 import pysam
 import shap
-
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from keras.models import load_model
-from keras.utils import CustomObjectScope
-
 from basepairmodels.cli.argparsers import shap_scores_argsparser
-from basepairmodels.cli.batchgenutils import *
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.shaputils import *
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
-
 from mseqgen import quietexception
+from mseqgen.sequtils import one_hot_encode
 from mseqgen.utils import gaussian1D_smoothing
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import CustomObjectScope
+
 
 def save_scores(peaks_df, one_hot_sequences, hyp_shap_scores, output_fname):
     """
@@ -244,7 +242,7 @@ def shap_scores(args, shap_dir):
         sequences = null_sequences[:]
 
     # one hot encode all the sequences
-    X = one_hot_encode(sequences)
+    X = one_hot_encode(sequences, args.input_seq_len)
     print("X shape", X.shape)
         
     # inline function to handle dinucleotide shuffling
