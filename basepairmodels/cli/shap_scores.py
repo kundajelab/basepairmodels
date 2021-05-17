@@ -307,6 +307,9 @@ def shap_scores(args, shap_dir):
         
         
 def shap_scores_main():
+    # disable eager execution so shap deep explainer wont break
+    tf.compat.v1.disable_eager_execution()
+    
     # parse the command line arguments
     parser = shap_scores_argsparser()
     args = parser.parse_args()
