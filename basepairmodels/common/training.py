@@ -266,9 +266,9 @@ def train_and_validate(input_params, output_params, genome_params,
                       train_batch_gen_params['output_len'],
                       len(network_params['control_smoothing']) + 1,
                       filters=network_params['filters'], 
-                      num_tasks=train_gen._num_tasks, 
-                      use_attribution_prior, 
-                      attribution_prior_params)
+                      num_tasks=train_gen._num_tasks,
+                      use_attribution_prior=use_attribution_prior,
+                      attribution_prior_params=attribution_prior_params)
     
     # print out the model summary
     model.summary()
