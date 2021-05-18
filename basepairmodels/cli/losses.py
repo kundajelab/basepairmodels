@@ -1,11 +1,14 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
+import tensorflow.keras.backend as kb
+
+from basepairmodels.cli.attribution_prior_utils import smooth_tensor_1d
 
 def multinomial_nll(true_counts, logits):
     """Compute the multinomial negative log-likelihood
     Args:
       true_counts: observed count values
-      logits: predicted logit values
+      logits: predicted logits values
     """
     counts_per_example = tf.reduce_sum(true_counts, axis=-1)
     dist = tfp.distributions.Multinomial(total_count=counts_per_example,
@@ -38,3 +41,81 @@ class MultichannelMultinomialNLL(object):
 
     def get_config(self):
         return {"n": self.n}
+
+
+def fourier_att_prior_loss(
+    status, input_grads, freq_limit, limit_softness,
+    att_prior_grad_smooth_sigma):
+    
+    """
+    Computes an attribution prior loss for some given training 
+    examples, using a Fourier transform form.
+    
+    Args:
+        status (tensor): a B-tensor, where B is the batch size; each
+            entry is 1 if that example is to be treated as a positive
+            example, and 0 otherwise
+        input_grads (tensor): a B x L x 4 tensor, where B is the batch
+            size, L is the length of the input; this needs to be the
+            gradients of the input with respect to the output; this
+            should be *gradient times input*
+        freq_limit (int): the maximum integer frequency index, k, to
+            consider for the loss; this corresponds to a frequency
+            cut-off of pi * k / L; k should be less than L / 2
+        limit_softness (float): amount to soften the limit by, using
+            a hill function; None means no softness
+        att_prior_grad_smooth_sigma (float): amount to smooth the
+            gradient before computing the loss
+            
+    Returns:
+        tensor: a single scalar Tensor consisting of the attribution
+        loss for the batch.
+    
+    """
+    abs_grads = kb.sum(kb.abs(input_grads), axis=2)
+
+    # Smooth the gradients
+    grads_smooth = smooth_tensor_1d(
+        abs_grads, att_prior_grad_smooth_sigma
+    )
+
+    # Only do the positives
+    pos_grads = grads_smooth[status == 1]
+
+    # check if the size is not zero
+    if not tf.equal(tf.size(pos_grads), 0):
+        pos_fft = tf.signal.rfft(pos_grads)
+        pos_mags = tf.abs(pos_fft)
+        pos_mag_sum = kb.sum(pos_mags, axis=1, keepdims=True)
+        zero_mask = tf.cast(pos_mag_sum == 0, tf.float32)
+        # Keep 0s when the sum is 0  
+        pos_mag_sum = pos_mag_sum + zero_mask  
+        pos_mags = pos_mags / pos_mag_sum
+
+        # Cut off DC
+        pos_mags = pos_mags[:, 1:]
+
+        # Construct weight vector
+        if limit_softness is None:
+            weights = tf.sequence_mask(
+                [freq_limit], maxlen=tf.shape(pos_mags)[1], dtype=tf.float32)
+        else:
+            weights = tf.sequence_mask(
+                [freq_limit], maxlen=tf.shape(pos_mags)[1], dtype=tf.float32)
+            # Take absolute value of negatives just to avoid NaN;
+            # they'll be removed
+            x = tf.abs(tf.range(
+                -freq_limit + 1, tf.shape(pos_mags)[1] - freq_limit + 1, 
+                dtype=tf.float32))  
+            decay = 1 / (1 + tf.pow(x, limit_softness))
+            weights = weights + ((1.0 - weights) * decay)
+
+        # Multiply frequency magnitudes by weights
+        pos_weighted_mags = pos_mags * weights
+
+        # Add up along frequency axis to get score
+        pos_score = tf.reduce_sum(pos_weighted_mags, axis=1)
+        pos_loss = 1 - pos_score
+        return kb.mean(pos_loss)
+    else:
+        return kb.constant(0)
