@@ -147,6 +147,23 @@ def training_argsparser():
     
     parser.add_argument('--shuffle', action='store_true')
     
+    # attribution prior params 
+    parser.add_argument('--use-attribution-prior', action='store_true', 
+                        help="specify if attribution prior loss model should "
+                        "be used")
+    
+    parser.add_argument('--attribution-prior-frequency-limit', type=int, 
+                        help="the maximum integer frequency index, k, to "
+                        "consider for the attribution prior loss", default=150)
+
+    parser.add_argument('--attribution-prior-limit-softness', type=float, 
+                        help="amount to soften the "
+                        "--attribution-prior-frequency-limit by", default=0.2)
+
+    parser.add_argument('--attribution-prior-grad-smooth-sigma', type=float, 
+                        help="amount to smooth the gradient before computing "
+                        "the loss", default=3.0)
+    
     return parser
 
 

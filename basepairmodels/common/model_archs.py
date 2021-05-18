@@ -15,8 +15,12 @@
 
 
 """
+
+from basepairmodels.common.attribution_prior import AttributionPriorModel
+from mseqgen import quietexception
 from tensorflow.keras import layers, models
 from tensorflow.keras.backend import int_shape
+
 
 def BPNetSumAll(input_seq_len, output_len, num_bias_profiles, filters=64, 
                 num_dilation_layers=9, conv1_kernel_size=21, 
@@ -451,39 +455,48 @@ def BPNet500d7(input_seq_len, output_len, num_bias_profiles, filters=25,
     
     return model
 
-def BPNet1000d8(input_seq_len=2114, output_len=1000, num_bias_profiles=2, filters=64, 
-          num_dilation_layers=8, conv1_kernel_size=21, dilation_kernel_size=3, 
-          profile_kernel_size=75, num_tasks=2):
+def BPNet1000d8(
+    input_seq_len=2114, output_len=1000, num_bias_profiles=2, filters=64,
+    num_dilation_layers=8, conv1_kernel_size=21, dilation_kernel_size=3, 
+    profile_kernel_size=75, num_tasks=2, use_attribution_prior=False,
+    attribution_prior_params=None):
     
     """
         BPNet model architecture as described in the BPNet paper
         https://www.biorxiv.org/content/10.1101/737981v1.full.pdf
         
         Args:
-            input_seq_len (int): The length of input DNA sequence
+            input_seq_len (int): length of input DNA sequence
             
-            output_len (int): The length of the profile output
+            output_len (int): length of the profile output
             
-            num_bias_profiles (int): The total number of control/bias
+            num_bias_profiles (int): total number of control/bias
                 tracks. In the case where original control and one  
                 smoothed version are provided this value is 2.
             
-            filters (int): The number of filters in each convolutional
+            filters (int): number of filters in each convolutional
                 layer of BPNet
                 
-            num_dilation_layers (int): the num of layers with dilated
+            num_dilation_layers (int): num of layers with dilated
                 convolutions
             
-            conv1_kernel_size (int): The kernel size for the first 1D 
+            conv1_kernel_size (int): kernel size for the first 1D 
                 convolution
             
-            dilation_kernel_size (int): The kernel size in each of the
+            dilation_kernel_size (int): kernel size in each of the
                 dilation layers
                 
-            profile_kernel_size (int): The kernel size in the first 
+            profile_kernel_size (int): kernel size in the first 
                 convolution of the profile head branch of the network
             
-            num_tasks (int): The number of output profile tracks
+            num_tasks (int): number of output profile tracks
+            
+            use_attribution_prior (bool): indicate whether to use 
+                attribution prior model
+                
+            attribution_prior_params (dict): python dictionary with 
+                keys 'frequency_limit', 'limit_softness' & 
+                'smooth_sigma'
             
         Returns:
             keras.model.Model
@@ -588,9 +601,38 @@ def BPNet1000d8(input_seq_len=2114, output_len=1000, num_bias_profiles=2, filter
     count_out = layers.Dense(num_tasks, 
                              name="logcount_predictions")(concat_gapcc_bci)
   
-    # instantiate keras Model with inputs and outputs
-    model = models.Model(inputs=[inp, bias_counts_input, bias_profile_input],
-                         outputs=[profile_out, count_out])
-    
+    if use_attribution_prior:
+        if attribution_prior_params is None:
+            raise quietexception.QuietException(
+            "You must provide 'attribution_prior_params' dict to use "
+            "attribution priors")
+                
+        if 'frquency_limit' not in attribution_prior_params:
+            raise quietexception.QuietException(
+            "Key Not Found (attribution_prior_params): 'frquency_limit'")
+
+        if 'limit_softness' not in attribution_prior_params:
+            raise quietexception.QuietException(
+            "Key Not Found (attribution_prior_params): 'limit_softness'")
+            
+        if 'grad_smooth_sigma' not in attribution_prior_params:
+            raise quietexception.QuietException(
+            "Key Not Found (attribution_prior_params): 'grad_smooth_sigma'")            
+
+        # instantiate attribution prior Model with inputs and outputs
+        model = AttributionPriorModel(
+            attribution_prior_params['frquency_limit'],
+            attribution_prior_params['limit_softness'],
+            attribution_prior_params['grad_smooth_sigma'],            
+            inputs=[inp, bias_counts_input, bias_profile_input],
+            outputs=[profile_out, count_out])
+        
+    else:
+        # instantiate keras Model with inputs and outputs
+        model = Model(
+            
+            inputs=[inp, bias_counts_input, bias_profile_input],
+            outputs=[profile_out, count_out])
+
     return model
 

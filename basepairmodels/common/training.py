@@ -152,26 +152,31 @@ def train_and_validate(input_params, output_params, genome_params,
             http://
         
         Args:
-            input_params (str): path to json file containing input
+            input_params (dict): dictionary containing input parameters
+            
+            output_params (dict): dictionary containing output 
                 parameters
             
-            output_params (str): path to json file containing output
+            genome_params (dict): dictionary containing genome
                 parameters
             
-            genome_params (str): path to json file containing genome
-                parameters
-            
-            batch_gen_params (str): path to json file containing batch
+            batch_gen_params (dict): dictionary containing batch
                 generation parameters
             
-            hyper_params (str): path to json file containing training &
-                validation hyper parameters
+            hyper_params (dict): dictionary containing containing 
+                training & validation hyper parameters
             
-            parallelization_params (str): path to json file containing
+            parallelization_params (dict): dictionary containing
                 parameters for parallelization options
             
-            network_params (str): path to json file containing
-                parameters specific to the deep learning architecture
+            network_params (dict): dictionary containing parameters
+                specific to the deep learning architecture
+                
+            use_attribution_prior (bool): indicate whether attribution
+                prior loss model should be used
+
+            attribution_prior_params (dict): dictionary containing
+                attribution prior parameters
             
             train_chroms (list): list of training chromosomes
             
@@ -261,7 +266,9 @@ def train_and_validate(input_params, output_params, genome_params,
                       train_batch_gen_params['output_len'],
                       len(network_params['control_smoothing']) + 1,
                       filters=network_params['filters'], 
-                      num_tasks=train_gen._num_tasks)
+                      num_tasks=train_gen._num_tasks, 
+                      use_attribution_prior, 
+                      attribution_prior_params)
     
     # print out the model summary
     model.summary()
@@ -429,40 +436,40 @@ def train_and_validate(input_params, output_params, genome_params,
 
     return model
         
-def train_and_validate_ksplits(input_params, output_params, genome_params, 
-                               batch_gen_params, hyper_params, 
-                               parallelization_params, network_params, 
-                               splits):
+def train_and_validate_ksplits(
+    input_params, output_params, genome_params, batch_gen_params, hyper_params, 
+    parallelization_params, network_params, use_attribution_prior, 
+    attribution_prior_params, splits):
 
     """
         Train and validate on one or more train/val splits
-
-        Note: the list & description for each of the required keys
-            in all of the json parameter files passed to this 
-            function can be found here:
-            http://
         
         Args:
-            input_params (str): path to json file containing input
+            input_params (dict): dictionary containing input parameters
+            
+            output_params (dict): dictionary containing output 
                 parameters
             
-            output_params (str): path to json file containing output
+            genome_params (dict): dictionary containing genome
                 parameters
             
-            genome_params (str): path to json file containing genome
-                parameters
-            
-            batch_gen_params (str): path to json file containing batch
+            batch_gen_params (dict): dictionary containing batch
                 generation parameters
             
-            hyper_params (str): path to json file containing training &
-                validation hyper parameters
+            hyper_params (dict): dictionary containing containing 
+                training & validation hyper parameters
             
-            parallelization_params (str): path to json file containing
+            parallelization_params (dict): dictionary containing
                 parameters for parallelization options
             
-            network_params (str): path to json file containing
-                parameters specific to the deep learning architecture
+            network_params (dict): dictionary containing parameters
+                specific to the deep learning architecture
+                
+            use_attribution_prior (bool): indicate whether attribution
+                prior loss model should be used
+
+            attribution_prior_params (dict): dictionary containing
+                attribution prior parameters
             
             splits (str): path to the json file containing train & 
                 validation splits
@@ -531,11 +538,13 @@ def train_and_validate_ksplits(input_params, output_params, genome_params,
         # Mitigates the problem where training subsequent splits
         # is considerably slow
         logging.debug("Split {}: Creating training process".format(i))
-        p = mp.Process(target=train_and_validate, args=
-                       [input_params, output_params, genome_params, 
-                        batch_gen_params, hyper_params, parallelization_params, 
-                        network_params, train_chroms, val_chroms, model_dir,
-                        split_tag])
+        p = mp.Process(
+            target=train_and_validate, 
+            args=[input_params, output_params, genome_params, 
+                  batch_gen_params, hyper_params, parallelization_params, 
+                  network_params, use_attribution_prior, 
+                  attribution_prior_params, train_chroms, val_chroms, 
+                  model_dir, split_tag])
         p.start()
         
         # wait for the process to finish

@@ -102,6 +102,15 @@ def main():
     network_params['counts_loss_weight'] = args.counts_loss_weight
     network_params['control_smoothing'] = args.control_smoothing
     
+    # attribution prior params
+    attribution_prior_params = {}
+    attribution_prior_params['frquency_limit'] = \
+        args.attribution_prior_frequency_limit
+    attribution_prior_params['limit_softness'] = \
+        args.attribution_prior_limit_softness
+    attribution_prior_params['grad_smooth_sigma'] = \
+        args.attribution_prior_grad_smooth_sigma
+    
     if not os.path.exists(output_params['output_dir']):
         raise quietexception.QuietException(
             "Directory {} does not exist".format(output_params['output_dir']))
@@ -138,7 +147,8 @@ def main():
     # training and validation
     training.train_and_validate_ksplits(
         input_params, output_params, genome_params, batch_gen_params, 
-        hyper_params, parallelization_params, network_params, splits)
+        hyper_params, parallelization_params, network_params, 
+        args.use_attirbution_prior, attribution_prior_params, splits)
 
 if __name__ == '__main__':
     main()
