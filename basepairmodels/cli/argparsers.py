@@ -160,9 +160,9 @@ def training_argsparser():
                         help="amount to soften the "
                         "--attribution-prior-frequency-limit by", default=0.2)
 
-    parser.add_argument('--attribution-prior-grad-smooth-sigma', type=float, 
+    parser.add_argument('--attribution-prior-grad-smooth-sigma', type=int, 
                         help="amount to smooth the gradient before computing "
-                        "the loss", default=3.0)
+                        "the loss", default=3)
     
     return parser
 
