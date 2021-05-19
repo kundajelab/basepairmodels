@@ -7,7 +7,8 @@ from tensorflow.nn import log_softmax
 
 class AttributionPriorModel(Model):
 
-    def __init__(self, frequency_limit, limit_softness, grad_smooth_sigma, 
+    def __init__(self, frequency_limit, limit_softness, grad_smooth_sigma,
+                 profile_grad_loss_weight, counts_grad_loss_weight,
                  **kwargs):
         super(AttributionPriorModel, self).__init__(**kwargs)
         
@@ -58,8 +59,9 @@ class AttributionPriorModel(Model):
                 x['status'], input_grads_counts, self.freq_limit, 
                 self.limit_softness, self.grad_smooth_sigma)
 
-            batch_attr_prior_loss = batch_attr_prior_loss_profile + \
-                batch_attr_prior_loss_counts
+            batch_attr_prior_loss = \
+                (profile_grad_loss_weight * batch_attr_prior_loss_profile) + \
+                (counts_grad_loss_weight * batch_attr_prior_loss_counts)
             
             batch_loss = batch_loss + batch_attr_prior_loss
 
