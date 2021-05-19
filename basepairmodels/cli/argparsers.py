@@ -164,6 +164,16 @@ def training_argsparser():
                         help="amount to smooth the gradient before computing "
                         "the loss", default=3)
     
+    parser.add_argument('--attribution-prior-profile-grad-loss-weight', 
+                        type=float,  help="weight for the attribution "
+                        "prior loss computed on profile gradients", 
+                        default=200.0)
+
+    parser.add_argument('--attribution-prior-counts-grad-loss-weight', 
+                        type=float,  help="weight for the attribution "
+                        "prior loss computed on counts gradients", 
+                        default=100.0)
+
     return parser
 
 

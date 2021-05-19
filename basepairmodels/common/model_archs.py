@@ -623,7 +623,9 @@ def BPNet1000d8(
         model = AttributionPriorModel(
             attribution_prior_params['frquency_limit'],
             attribution_prior_params['limit_softness'],
-            attribution_prior_params['grad_smooth_sigma'],            
+            attribution_prior_params['grad_smooth_sigma'],     
+            attribution_prior_params['profile_grad_loss_weight'],
+            attribution_prior_params['counts_grad_loss_weight'],
             inputs=[inp, bias_counts_input, bias_profile_input],
             outputs=[profile_out, count_out])
         

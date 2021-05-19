@@ -110,6 +110,10 @@ def main():
         args.attribution_prior_limit_softness
     attribution_prior_params['grad_smooth_sigma'] = \
         args.attribution_prior_grad_smooth_sigma
+    attribution_prior_params['profile_grad_loss_weight'] = \
+        args.attribution_prior_profile_grad_loss_weight
+    attribution_prior_params['counts_grad_loss_weight'] = \
+        args.attribution_prior_counts_grad_loss_weight
     
     if not os.path.exists(output_params['output_dir']):
         raise quietexception.QuietException(
