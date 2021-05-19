@@ -18,7 +18,7 @@
 
 from basepairmodels.common.attribution_prior import AttributionPriorModel
 from mseqgen import quietexception
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, Model
 from tensorflow.keras.backend import int_shape
 
 
@@ -632,7 +632,6 @@ def BPNet1000d8(
     else:
         # instantiate keras Model with inputs and outputs
         model = Model(
-            
             inputs=[inp, bias_counts_input, bias_profile_input],
             outputs=[profile_out, count_out])
 
