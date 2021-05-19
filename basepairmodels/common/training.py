@@ -140,7 +140,8 @@ def reduce_lr_on_plateau(losses, current_lr, factor=0.5, patience=2,
 
 def train_and_validate(input_params, output_params, genome_params, 
                        batch_gen_params, hyper_params, parallelization_params, 
-                       network_params, train_chroms, val_chroms, 
+                       network_params, use_attribution_prior, 
+                       attribution_prior_params, train_chroms, val_chroms, 
                        model_dir, suffix_tag=None):
 
     """
