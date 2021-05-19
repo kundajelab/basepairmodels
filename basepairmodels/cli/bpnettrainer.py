@@ -148,7 +148,7 @@ def main():
     training.train_and_validate_ksplits(
         input_params, output_params, genome_params, batch_gen_params, 
         hyper_params, parallelization_params, network_params, 
-        args.use_attirbution_prior, attribution_prior_params, splits)
+        args.use_attribution_prior, attribution_prior_params, splits)
 
 if __name__ == '__main__':
     main()
