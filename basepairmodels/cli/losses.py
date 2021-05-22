@@ -82,8 +82,10 @@ def fourier_att_prior_loss(
     # Only do the positives
     pos_grads = grads_smooth[status == 1]
 
-    # check if the size is not zero
-    if not tf.equal(tf.size(pos_grads), 0):
+    def _zero_constant():
+        return kb.constant(0)
+    
+    def _fourier_att_prior_loss(pos_grads):
         pos_fft = tf.signal.rfft(pos_grads)
         pos_mags = tf.abs(pos_fft)
         pos_mag_sum = kb.sum(pos_mags, axis=1, keepdims=True)
@@ -117,5 +119,11 @@ def fourier_att_prior_loss(
         pos_score = tf.reduce_sum(pos_weighted_mags, axis=1)
         pos_loss = 1 - pos_score
         return kb.mean(pos_loss)
-    else:
-        return kb.constant(0)
+    
+    
+    # if size is 0 then return 0, else compute attribution prior loss
+    return tf.cond(tf.equal(tf.size(pos_grads), 0), 
+                   _zero_constant,
+                   lambda:  _fourier_att_prior_loss(pos_grads))
+
+                   

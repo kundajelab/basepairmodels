@@ -15,6 +15,8 @@ class AttributionPriorModel(Model):
         self.freq_limit = frequency_limit
         self.limit_softness = limit_softness
         self.grad_smooth_sigma = grad_smooth_sigma
+        self.profile_grad_loss_weight = profile_grad_loss_weight
+        self.counts_grad_loss_weight = counts_grad_loss_weight
  
     def train_step(self, data):
         # Unpack the data. Its structure depends on your model and
@@ -60,8 +62,8 @@ class AttributionPriorModel(Model):
                 self.limit_softness, self.grad_smooth_sigma)
 
             batch_attr_prior_loss = \
-                (profile_grad_loss_weight * batch_attr_prior_loss_profile) + \
-                (counts_grad_loss_weight * batch_attr_prior_loss_counts)
+                (self.profile_grad_loss_weight * batch_attr_prior_loss_profile) + \
+                (self.counts_grad_loss_weight * batch_attr_prior_loss_counts)
             
             batch_loss = batch_loss + batch_attr_prior_loss
 
