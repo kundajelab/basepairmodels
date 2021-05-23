@@ -291,8 +291,25 @@ def train_and_validate(input_params, output_params, genome_params,
     # begin time for training
     t1 = time.time()
 
-    # track validation losses for early stopping and learning rate
-    # updates
+    # track training losses, validation losses and start & end
+    # times
+    custom_history = {
+        'learning_rate': {},
+        'loss': {},
+        'profile_predictions_loss': {},
+        'logcount_predictions_loss': {},
+        'attribution_prior_loss': {},
+        'val_loss': {},
+        'val_profile_predictions_loss': {},
+        'val_logcount_predictions_loss': {},
+        'val_attribution_prior_loss': {},
+        'start_time': {},
+        'end_time': {},
+        'elapsed': {}        
+    }
+    
+    # we maintain a separate list to track validation losses to make it 
+    # easier for early stopping & learning rate updates
     val_losses = []
     
     # track best loss so we can restore weights 
@@ -310,10 +327,26 @@ def train_and_validate(input_params, output_params, genome_params,
         # First, let's train for one epoch
         logging.info("Training Epoch {}".format(epoch + 1))
         train_start_time = time.time()
+        custom_history['learning_rate'][str(epoch + 1)] = \
+            model.optimizer.learning_rate.numpy()
+        custom_history['start_time'][str(epoch + 1)] = \
+            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(train_start_time))
         # training generator function that will be passed to fit
         train_generator = train_gen.gen(epoch)
-        model.fit(train_generator, epochs=1, steps_per_epoch=train_steps)
+        history = model.fit(
+            train_generator, epochs=1, steps_per_epoch=train_steps)
         train_end_time = time.time()
+        
+        # record the losses
+        custom_history['loss'][str(epoch + 1)] = history.history['loss'][0]
+        custom_history['profile_predictions_loss'][str(epoch + 1)] = \
+            history.history['profile_predictions_loss'][0]
+        custom_history['logcount_predictions_loss'][str(epoch + 1)] = \
+            history.history['logcount_predictions_loss'][0]
+        if use_attribution_prior:
+            custom_history['attribution_prior_loss'][str(epoch + 1)] = \
+                history.history['attribution_prior_loss'][0]
+            
         
         # Then, we evaluate on the validation set
         logging.info("Validation Epoch {}".format(epoch + 1))
@@ -324,6 +357,20 @@ def train_and_validate(input_params, output_params, genome_params,
             val_generator, steps=val_steps, return_dict=True)
         val_losses.append(val_loss['loss'])
         val_end_time = time.time()
+        custom_history['end_time'][str(epoch + 1)] = \
+            time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(val_end_time))
+        custom_history['elapsed'][str(epoch + 1)] = \
+            val_end_time - train_start_time
+        
+        # record the losses
+        custom_history['val_loss'][str(epoch + 1)] = val_loss['loss']
+        custom_history['val_profile_predictions_loss'][str(epoch + 1)] = \
+            val_loss['profile_predictions_loss']
+        custom_history['val_logcount_predictions_loss'][str(epoch + 1)] = \
+            val_loss['logcount_predictions_loss']
+        if use_attribution_prior:
+            custom_history['val_attribution_prior_loss'][str(epoch + 1)] = \
+                val_loss['attribution_prior_loss']
         
         # update best weights and loss 
         if val_loss['loss'] < best_loss:
@@ -346,17 +393,18 @@ def train_and_validate(input_params, output_params, genome_params,
         # lower learning rate if criteria are satisfied
         new_lr = reduce_lr_on_plateau(
             val_losses,
-            model.optimizer.learning_rate,
+            model.optimizer.learning_rate.numpy(),
             factor=hyper_params['lr_reduction_factor'], 
             patience=hyper_params['reduce_lr_on_plateau_patience'],
             min_lr=hyper_params['min_learning_rate'])
         
         # set the new learning rate
-        model.optimizer.lr.assign(new_lr)
+        model.optimizer.learning_rate.assign(new_lr)
 
         # display current learning rate and training status
-        logging.info("Current learning rate - {}, Stop Training - {}".format(
-            model.optimizer.learning_rate, model.stop_training))
+        logging.info("Current learning rate - {:5f}, Stop Training - {}".format(
+            model.optimizer.learning_rate.numpy(),
+            model.stop_training))
 
     # end time for training
     t2 = time.time() 
@@ -384,24 +432,19 @@ def train_and_validate(input_params, output_params, genome_params,
     model.save(model_fname)
     logging.info("Finished saving model: {}".format(model_fname))
 
-#     # save history to json:  
-#     # Step 1. create a custom history object with a new key for 
-#     # epoch times
-#     custom_history = copy.deepcopy(history.history)
-#     custom_history['times'] = time_tracker.times
+    # save history to json:  
+    # Step 1. convert the custom history dict to a pandas DataFrame:  
+    hist_df = pd.DataFrame(custom_history) 
 
-#     # Step 2. convert the custom history dict to a pandas DataFrame:  
-#     hist_df = pd.DataFrame(custom_history) 
+    # file name for json file
+    hist_json = model_fname.replace('.h5', '.history.json')
 
-#     # file name for json file
-#     hist_json = model_fname.replace('.h5', '.history.json')
-
-#     # Step 3. write the dataframe to json
-#     with open(hist_json, mode='w') as f:
-#         hist_df.to_json(f)
+    # Step 2. write the dataframe to json
+    with open(hist_json, mode='w') as f:
+        hist_df.to_json(f)
     
-#     logging.info("Finished saving training and validation history: {}".format(
-#         hist_json))
+    logging.info("Finished saving training and validation history: {}".format(
+        hist_json))
 
     # write all the command line arguments to a json file
     # & include the number of epochs the training lasted for, and the
@@ -436,7 +479,8 @@ def train_and_validate(input_params, output_params, genome_params,
         json.dump(config, fp)
 
     return model
-        
+
+
 def train_and_validate_ksplits(
     input_params, output_params, genome_params, batch_gen_params, hyper_params, 
     parallelization_params, network_params, use_attribution_prior, 
