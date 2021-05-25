@@ -44,6 +44,7 @@ from basepairmodels.cli import bigwigutils
 from basepairmodels.cli import logger
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli.losses import multinomial_nll
+from basepairmodels.common.attribution_prior import AttributionPriorModel
 from mseqgen import quietexception
 from mseqgen import generators
 from tensorflow.keras.models import load_model
@@ -361,7 +362,8 @@ def predict_main():
     # predict
     logging.info("Loading {}".format(args.model))
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL}):
+                            MultichannelMultinomialNLL, 
+                            'AttributionPriorModel': AttributionPriorModel}):
             
         predict(args, input_data, pred_dir)
     
