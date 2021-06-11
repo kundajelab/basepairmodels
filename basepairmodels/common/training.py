@@ -225,24 +225,24 @@ def train_and_validate(input_params, output_params, genome_params,
 
     # instantiate the batch generator class for training
     train_gen = BatchGenerator(input_params, train_batch_gen_params, 
-                               network_params, 
                                genome_params['reference_genome'], 
                                genome_params['chrom_sizes'],
                                train_chroms, 
                                num_threads=parallelization_params['threads'],
                                epochs=hyper_params['epochs'], 
-                               batch_size=hyper_params['batch_size'])
+                               batch_size=hyper_params['batch_size'], 
+                               **network_params)
 
 
     # instantiate the batch generator class for validation
     val_gen = BatchGenerator(input_params, val_batch_gen_params, 
-                             network_params,
                              genome_params['reference_genome'], 
                              genome_params['chrom_sizes'],
                              val_chroms, 
                              num_threads=parallelization_params['threads'],
                              epochs=hyper_params['epochs'], 
-                             batch_size=hyper_params['batch_size'])
+                             batch_size=hyper_params['batch_size'], 
+                             **network_params)
 
     # lets make sure the sizes look reasonable
     logging.info("TRAINING SIZE - {}".format(train_gen._samples.shape))
