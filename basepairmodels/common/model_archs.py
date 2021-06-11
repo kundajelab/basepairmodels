@@ -17,7 +17,7 @@
 """
 
 from basepairmodels.common.attribution_prior import AttributionPriorModel
-from mseqgen import quietexception
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from tensorflow.keras import layers, models, Model
 from tensorflow.keras.backend import int_shape
 
@@ -603,20 +603,20 @@ def BPNet1000d8(
   
     if use_attribution_prior:
         if attribution_prior_params is None:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
             "You must provide 'attribution_prior_params' dict to use "
             "attribution priors")
                 
         if 'frquency_limit' not in attribution_prior_params:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
             "Key Not Found (attribution_prior_params): 'frquency_limit'")
 
         if 'limit_softness' not in attribution_prior_params:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
             "Key Not Found (attribution_prior_params): 'limit_softness'")
             
         if 'grad_smooth_sigma' not in attribution_prior_params:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
             "Key Not Found (attribution_prior_params): 'grad_smooth_sigma'")            
 
         # instantiate attribution prior Model with inputs and outputs
