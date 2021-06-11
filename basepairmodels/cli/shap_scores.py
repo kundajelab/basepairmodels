@@ -10,10 +10,10 @@ import tensorflow_probability as tfp
 
 from basepairmodels.cli.argparsers import shap_scores_argsparser
 from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.shaputils import *
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
-from mseqgen import quietexception
 from mseqgen.sequtils import one_hot_encode
 from mseqgen.utils import gaussian1D_smoothing
 from tensorflow.keras.models import load_model
@@ -131,7 +131,7 @@ def shap_scores(args, shap_dir):
                 input_data = json.loads(inp_json.read())
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                raise quietexception.QuietException(
+                raise NoTracebackException(
                     exc_type.__name__ + ' ' + str(exc_value))
                
         logging.info("Opening control bigWigs ...")
@@ -143,7 +143,7 @@ def shap_scores(args, shap_dir):
                     
                     # check if the file exists
                     if not os.path.exists(control_bigWig_path):
-                        raise quietexception.QuietException(
+                        raise NoTracebackException(
                             "File {} does not exist".format(
                                 control_bigWig_path))
                     
@@ -316,39 +316,39 @@ def shap_scores_main():
     
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(args.output_directory))
 
     # check if the output directory is a directory path
     if not os.path.isdir(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "{} is not a directory".format(args.output_directory))
     
     # check if the reference genome file exists
     if not os.path.exists(args.reference_genome):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.reference_genome))
 
     # check if the model file exists
     if not os.path.exists(args.model):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.model))
 
     # check if the bed file exists
     if not os.path.exists(args.bed_file):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.bed_file))
     
     # if controls are specified check if the control_info json exists
     if args.control_info is not None:
         if not os.path.exists(args.control_info):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Input data file {} does not exist".format(args.control_info))
             
     # check if both args.chroms and args.sample are specified, only
     # one of the two is allowed
     if args.chroms is not None and args.sample is not None:
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Only one of [--chroms, --sample]  is allowed")
             
     if args.automate_filenames:

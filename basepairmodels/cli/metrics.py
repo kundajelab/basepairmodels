@@ -5,8 +5,8 @@ import pyBigWig
 
 from basepairmodels.cli.argparsers import metrics_argsparser
 from basepairmodels.cli.bpnetutils import *
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.logger import *
-from mseqgen import quietexception
 from mseqgen.sequtils import getChromPositions
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
@@ -41,7 +41,7 @@ def mnll(true_counts, logits=None, probs=None):
         
         # check for length mismatch
         if len(logits) != len(true_counts):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Length of logits does not match length of true_counts")
         
         # convert logits to softmax probabilities
@@ -52,18 +52,18 @@ def mnll(true_counts, logits=None, probs=None):
         
         # check for length mistmatch
         if len(probs) != len(true_counts):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Length of probs does not match length of true_counts")
         
         # check if probs sums to 1
         if abs(1.0 - np.sum(probs)) > 1e-3:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "'probs' array does not sum to 1")   
            
     else:
         
         # both 'probs' and 'logits' are None
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "At least one of probs or logits must be provided. "
             "Both are None.")
   
@@ -95,7 +95,7 @@ def profile_cross_entropy(true_counts, logits=None, probs=None):
         
         # check for length mismatch
         if len(logits) != len(true_counts):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Length of logits does not match length of true_counts")
         
         # convert logits to softmax probabilities
@@ -106,17 +106,17 @@ def profile_cross_entropy(true_counts, logits=None, probs=None):
         
         # check for length mistmatch
         if len(probs) != len(true_counts):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Length of probs does not match length of true_counts")
         
         # check if probs sums to 1
         if abs(1.0 - np.sum(probs)) > 1e-3:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "'probs' array does not sum to 1")        
     else:
         
         # both 'probs' and 'logits' are None
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "At least one of probs or logits must be provided. "
             "Both are None.")
         
@@ -146,37 +146,37 @@ def metrics_main():
 
     # check if the output directory exists
     if not os.path.exists(args.output_dir):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(args.output_dir))
     
     # check if the peaks file exists
     if args.peaks is not None and not os.path.exists(args.peaks):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.peaks))
             
     # check if the bounds file exists
     if args.bounds_csv is not None and not os.path.exists(args.bounds_csv):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.bounds_csv))
         
     # check if profile A exists
     if not os.path.exists(args.profileA):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.profileA))
     
     # check if profile B exists
     if not os.path.exists(args.profileB):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.profileB))
 
     # check if counts A exists
     if args.countsA is not None and not os.path.exists(args.countsA):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.countsA))
     
     # check if counts B exists
     if args.countsB is not None and not os.path.exists(args.countsB):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File {} does not exist".format(args.countsB))
 
     # check if we need to auto generate the output directory
@@ -189,7 +189,7 @@ def metrics_main():
     elif os.path.isdir(args.output_dir):
         metrics_dir = args.output_dir        
     else:
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "{} is not a directory".format(args.output_dir))
 
     # filename to write debug logs
@@ -243,7 +243,7 @@ def metrics_main():
     # check that there are exactly the same number of rows in the 
     # bounds dataframe as compared to allPositions
     if bounds_df is not None and (bounds_df.shape[0] != allPositions.shape[0]):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Bounds row count does not match chrom positions row "
             "count".format(args.peaks)) 
      
@@ -299,7 +299,7 @@ def metrics_main():
             profileB = np.nan_to_num(np.array(
                 bigWigProfileB.values(chrom, start, end)))
         except Exception as e:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Error retrieving values {}, {}, {}".format(chrom, start, end))
             
         if args.countsA:

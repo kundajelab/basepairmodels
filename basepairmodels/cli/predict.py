@@ -42,10 +42,10 @@ import time
 from basepairmodels.cli import argparsers
 from basepairmodels.cli import bigwigutils
 from basepairmodels.cli import logger
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli.losses import multinomial_nll
 from basepairmodels.common.attribution_prior import AttributionPriorModel
-from mseqgen import quietexception
 from mseqgen import generators
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import CustomObjectScope
@@ -342,7 +342,7 @@ def predict_main():
     
     # make sure the input_data json file exists
     if not os.path.isfile(args.input_data):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "File not found: {} OR you may have accidentally "
             "specified a directory path.".format(args.input_data))
         
@@ -352,7 +352,7 @@ def predict_main():
             #: dictionary of tasks for training
             input_data = json.loads(inp_json.read())
         except json.decoder.JSONDecodeError:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Unable to load json file {}. Valid json expected. "
                 "Check the file for syntax errors.".format(
                     args.input_data))

@@ -29,8 +29,8 @@
 
 """
 from basepairmodels.cli.argparsers import counts_loss_weight_argsparser
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.common import stats
-from mseqgen import quietexception
 
 import json
 import pandas as pd
@@ -51,7 +51,7 @@ def counts_loss_weight_main():
         # output the default value to stdout
         print(args.default)
 
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Input data file {} does not exist. Using default weight "
             "{}".format(args.input_data, args.default))
             
@@ -63,7 +63,7 @@ def counts_loss_weight_main():
             print(args.default)
         
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "{} {}. Using default weight {}".format(
                     exc_type.__name__, str(exc_value), args.default))
     
@@ -82,7 +82,7 @@ def counts_loss_weight_main():
         # output the default value to stdout
         print(args.default)
 
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "No 'signal' bigWigs found. Using default weight {}".format(
                 args.default))
     else:
@@ -92,7 +92,7 @@ def counts_loss_weight_main():
                 # output the default value to stdout
                 print(args.default)
 
-                raise quietexception.QuietException(
+                raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(bigWig, args.default))
         
@@ -101,7 +101,7 @@ def counts_loss_weight_main():
         # output the default value to stdout
         print(args.default)
 
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "No 'peaks' files found. Using default weight {}".format(
                 args.default))
     else:
@@ -111,7 +111,7 @@ def counts_loss_weight_main():
                 # output the default value to stdout
                 print(args.default)
 
-                raise quietexception.QuietException(
+                raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(peak_file, args.default))
 

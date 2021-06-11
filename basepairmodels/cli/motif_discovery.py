@@ -22,12 +22,12 @@ import modisco.coordproducers
 import modisco.metaclusterers
 import modisco.util
 
+from basepairmodels.cli.argparsers import motif_discovery_argsparser
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from modisco.tfmodisco_workflow.seqlets_to_patterns \
     import TfModiscoSeqletsToPatternsFactory
 from modisco.tfmodisco_workflow.workflow import TfModiscoWorkflow
 from modisco.visualization import viz_sequence
-from basepairmodels.cli.argparsers import motif_discovery_argsparser
-from mseqgen import quietexception
 
 
 def save_plot(weights, dst_fname):
@@ -56,11 +56,11 @@ def motif_discovery_main():
     args = parser.parse_args()
 
     if not os.path.exists(args.scores_path):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Score file {} does not exist".format(args.scores_path))
 
     if not os.path.exists(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Output directiry {} does not exist".format(args.output_directory))
 
     # Load the scores

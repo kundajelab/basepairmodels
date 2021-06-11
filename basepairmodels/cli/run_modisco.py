@@ -21,11 +21,11 @@ import modisco.coordproducers
 import modisco.metaclusterers
 import modisco.util
 
+from basepairmodels.cli.argparsers import modisco_argsparser
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from modisco.tfmodisco_workflow.seqlets_to_patterns import TfModiscoSeqletsToPatternsFactory
 from modisco.tfmodisco_workflow.workflow import TfModiscoWorkflow
 from modisco.visualization import viz_sequence
-from basepairmodels.cli.argparsers import modisco_argsparser
-from mseqgen import quietexception
 
 
 def save_plot(weights, dst_fname):
@@ -54,16 +54,16 @@ def modisco_main():
     args = parser.parse_args()
 
     if not os.path.exists(args.scores_path):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Score file {} does not exist".format(args.scores_path))
         
 #     if not os.path.exists(args.scores_locations):
-#         raise quietexception.QuietException(
+#         raise NoTracebackException(
 #             "Scores locations file {} does not exist".format(
 #                 args.scores_locations))
         
     if not os.path.exists(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Output directiry {} does not exist".format(args.output_directory))
 
     # Load the scores
@@ -93,6 +93,10 @@ def modisco_main():
     task_to_scores['task0']  = proj_shap_scores_seq
     task_to_hyp_scores['task0']  = shap_scores_seq
 
+    print(onehot_data.shape)
+    print(proj_shap_scores_seq.shape)
+    print(shap_scores_seq.shape)
+    
     # track_set = modisco.tfmodisco_workflow.workflow.prep_track_set(
     #     task_names=["task0"], 
     #     contrib_scores=task_to_scores, 

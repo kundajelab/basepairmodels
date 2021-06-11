@@ -36,8 +36,8 @@ import os
 import sys
 
 from basepairmodels.cli import argparsers
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.common import model_archs, training
-from mseqgen import quietexception
 
 
 def main():
@@ -116,33 +116,33 @@ def main():
         args.attribution_prior_counts_grad_loss_weight
     
     if not os.path.exists(output_params['output_dir']):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(output_params['output_dir']))
 
     if not output_params['automate_filenames'] and \
         output_params['automate_filenames'] is None:
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Model output filename not specified")
 
     if not os.path.exists(genome_params['reference_genome']):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Reference genome file {} does not exist".format(
                 genome_params['reference_genome'] ))
     
     if not os.path.exists(genome_params['chrom_sizes']):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Chromosome sizes file {} does not exist".format(
             genome_params['chrom_sizes']))
         
     try:
         get_model = getattr(model_archs, network_params['name'])
     except AttributeError:
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Network {} not found in model definitions".format(
                 network_params['name']))
     
     if not os.path.isfile(args.splits):
-        raise quietexception.QuietException("File not found: {}", args.splits)
+        raise NoTracebackException("File not found: {}", args.splits)
                 
     # load splits from json file
     with open(args.splits, "r") as splits_json:

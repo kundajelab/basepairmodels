@@ -46,10 +46,10 @@
 
 
 from basepairmodels.cli.argparsers import embeddings_argsparser
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.logger import *
 from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 from mseqgen.sequtils import one_hot_encode
-from mseqgen.quietexception import QuietException
 
 from keras.models import Model, load_model
 from keras.utils import CustomObjectScope
@@ -258,28 +258,28 @@ def embeddings_main():
 
     # check if the model file exists
     if not os.path.exists(args.model):
-        raise QuietException(
+        raise NoTracebackException(
             "Model {} does not exist".format(args.model))
 
     # check if the peaks file exists
     if not os.path.exists(args.peaks):
-        raise QuietException(
+        raise NoTracebackException(
             "peaks file {} does not exist".format(args.peaks))
 
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
-        raise QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(args.output_directory))
     
     if (args.embeddings_layer_name is not None) and \
         (args.numbered_embeddings_layers_prefix is not None):
-        raise QuietException(
+        raise NoTracebackException(
             "Only one of [--embeddings-layer-name, "
             "--numbered-embeddings-layers-prefix] can be used")
     
     if (args.embeddings_layer_name is None) and \
         (args.numbered_embeddings_layers_prefix is None):
-        raise QuietException(
+        raise NoTracebackException(
             "One of [--embeddings-layer-name, "
             "--numbered-embeddings-layers-prefix] must be used")
         
@@ -324,7 +324,7 @@ def embeddings_main():
                                      input_layer_shape)
         
         if input_idx == -1:
-            raise quietexception.QuietException(
+            raise NoTracebackException.NoTracebackException(
                 "No match found for input layer {} with shape {}".format(
                     args.input_layer_name. args.input_layer_shape))
         else:
@@ -362,7 +362,7 @@ def embeddings_main():
                                             
                     layers.append(layer)
                 except ValueError:
-                    raise quietexception.QuietException(
+                    raise NoTracebackException.NoTracebackException(
                         "No match found for {}".format(layer_name))
 
             if len(layers) == 1:

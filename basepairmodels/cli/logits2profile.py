@@ -6,7 +6,7 @@ import pyBigWig
 import sys
 
 from basepairmodels.cli.argparsers import logits2profile_argsparser
-from mseqgen import quietexception
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from scipy.special import logsumexp
 from tqdm import tqdm
 
@@ -17,31 +17,31 @@ def logits2profile_main():
     
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(args.output_dir))
         return
     
     # check if the logits file exists
     if not os.path.exists(args.logits_file):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Logits file {} does not exist".format(args.logits_file))
         return
 
     # check if the counts file exists
     if not os.path.exists(args.counts_file):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Counts file {} does not exist".format(args.counts_file))
         return
 
     # check if the peaks file exists
     if not os.path.exists(args.peaks):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Peaks file {} does not exist".format(args.peaks))
         return
     
     # check if the chrom sizes file exists
     if not os.path.exists(args.chrom_sizes):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Peaks file {} does not exist".format(args.chrom_sizes))
         return
 

@@ -38,8 +38,8 @@ import pyBigWig
 import sys
 
 from basepairmodels.cli.argparsers import bounds_argsparser
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.metrics import mnll, profile_cross_entropy
-from mseqgen import quietexception
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
 from scipy.special import logsumexp
@@ -79,7 +79,7 @@ def get_average_profile(input_bigWig, peaks_df, peak_width):
     for idx, row in peaks_df.iterrows():
         # raise exception if 'end' - 'start' is not equal to peak_width
         if (row['end'] - row['start']) != peak_width:
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Inconsistent peak width found at: {}:{}-{}".format(
                     row['chrom'], row['start'], row['end']))
         
@@ -255,7 +255,7 @@ def bounds(input_bigWig, peaks_df, peak_width, smoothing_params=[7, 81]):
         # raise exception if 'end' - 'start' is not equal to peak_width
         if (row['end'] - row['start']) != peak_width:
 
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "Inconsistent peak width found at: {}:{}-{}".format(
                     row['chrom'], row['start'], row['end']))
 
@@ -393,31 +393,31 @@ def bounds_main():
     
     # check if the output directory exists
     if not os.path.exists(args.output_directory):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Directory {} does not exist".format(args.output_directory))
 
     # check to make sure at least one input profile was provided
     if len(args.input_profiles) == 0:
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "At least one input file is required to compute upper and "
             "lower bound")
 
     # check to see if the number of output names is equal to the number
     # of input profiles that were provided
     if len(args.output_names) != len(args.input_profiles) :
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "There should be same number of output names as the number "
             "of input files")
 
     # check if each input profile bigWig file exists
     for fname in args.input_profiles:
         if not os.path.exists(fname):
-            raise quietexception.QuietException(
+            raise NoTracebackException(
                 "File not found! {}".format(fname))
 
     # check if the peaks file exists
     if not os.path.exists(args.peaks):
-        raise quietexception.QuietException(
+        raise NoTracebackException(
             "Peaks file {} does not exist".format(args.peaks))
 
     # read the peaks bed file into a pandas dataframe
