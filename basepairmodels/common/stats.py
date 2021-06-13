@@ -9,7 +9,7 @@ import os
 import pyBigWig
 import numpy as np
 
-from mseqgen.quietexception import QuietException
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 
 
 def get_recommended_counts_loss_weight(input_bigWigs, peaks, 
@@ -48,13 +48,13 @@ def get_recommended_counts_loss_weight(input_bigWigs, peaks,
 
     # check if 'input_bigwigs' and 'peaks' have the same length
     if len(input_bigWigs) != len(peaks):
-        raise QuietException("There should be same number of peaks "
+        raise NoTracebackException("There should be same number of peaks "
                              "dataframes as input bigWigs") 
     
     # check to make sure all bigwigs are valid files
     for bigWig in input_bigWigs:
         if not os.path.exists(bigWig):
-            raise QuietException("File {} does not exist".format(bigWig))
+            raise NoTracebackException("File {} does not exist".format(bigWig))
 
     # open each bigwig and add file pointers to a list
     bigWigs = []
