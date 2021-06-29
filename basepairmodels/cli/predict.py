@@ -86,14 +86,14 @@ def predict(args, input_data, pred_dir):
     BatchGenerator = getattr(generators, sequence_generator_class_name)
 
     # instantiate the batch generator class for training
-    test_gen = BatchGenerator(input_params, batch_gen_params, 
-                               network_params, 
+    test_gen = BatchGenerator(input_params, batch_gen_params,
                                args.reference_genome, 
                                args.chrom_sizes,
                                args.chroms, 
                                num_threads=1,
                                epochs=1, 
-                               batch_size=args.batch_size)
+                               batch_size=args.batch_size,
+                               **network_params)
     
     # testing generator function
     test_generator = test_gen.gen(1)
