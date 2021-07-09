@@ -18,7 +18,8 @@ setup(
                       "numpy", "deepdish", "pandas", "matplotlib", "plotly", 
                       "deeptools", "pyfaidx", "modisco==0.5.14.1", "deeplift", 
                       "shap @ git+https://github.com/AvantiShri/shap.git", 
-                      "mseqgen @ git+https://github.com/kundajelab/mseqgen.git"],
+                      "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
+                      "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git"],
     extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
     zip_safe=False,
@@ -41,8 +42,8 @@ setup(
             "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main",
             "embeddings = basepairmodels.cli.embeddings:embeddings_main",            
             "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
-            "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main"
-#            "fastpredict = basepairmodels.cli.fastpredict:predict_main"
+            "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main",
+            "fastpredict = basepairmodels.cli.fastpredict:predict_main"
         ]
     }
 )
