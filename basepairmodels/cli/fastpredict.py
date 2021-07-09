@@ -16,14 +16,14 @@ from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 from basepairmodels.cli.metrics import mnll, profile_cross_entropy
-from keras.models import load_model
-from keras.utils import CustomObjectScope
 from mseqgen import generators
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
 from scipy.special import logsumexp
 from scipy.stats import pearsonr, spearmanr, multinomial
 from tqdm import tqdm
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import CustomObjectScope
 
 
 def mnll_min_max_bounds(profile):
