@@ -49,16 +49,10 @@ def training_argsparser():
                         "mseqgen library that will be used to generate "
                         "batches of data ", default='BPNet')
 
-    parser.add_argument('--filters', '-f', type=int,
-                        help="number of filters to use in BPNet",
-                        default=64)
+    parser.add_argument('--model-arch-params-json', type=str,
+                        help="path to json file containing params for the "
+                        "model architecture", required=True)
 
-    parser.add_argument('--counts-loss-weight', '-w', type=float,
-                        help="Weight for counts mse loss",
-                        default=100.0)
-    
-    parser.add_argument('--control-smoothing', default=[[7.5, 80]])
-    
     # parallelization params
     parser.add_argument('--threads', '-t', type=int,
                         help="number of parallel threads for batch "
@@ -128,52 +122,13 @@ def training_argsparser():
                         help="number of negatives to sample for every "
                         "positive peak", default=0.0)
         
+    parser.add_argument('--shuffle', action='store_true')
+
     # input data params
     parser.add_argument('--input-data', '-i', type=str,
                         help="path to json file containing task information", 
                         required=True)
     
-    parser.add_argument('--stranded', action='store_true', 
-                        help="specify if the input data is stranded or "
-                        "unstranded")
-
-    parser.add_argument('--has-control', action='store_true', 
-                        help="specify if the input data has controls")
-
-    
-    parser.add_argument('--sampling-mode', type=str, 
-                        choices=['peaks', 'sequential', 'random'], 
-                        default='peaks')
-    
-    parser.add_argument('--shuffle', action='store_true')
-    
-    # attribution prior params 
-    parser.add_argument('--use-attribution-prior', action='store_true', 
-                        help="specify if attribution prior loss model should "
-                        "be used")
-    
-    parser.add_argument('--attribution-prior-frequency-limit', type=int, 
-                        help="the maximum integer frequency index, k, to "
-                        "consider for the attribution prior loss", default=150)
-
-    parser.add_argument('--attribution-prior-limit-softness', type=float, 
-                        help="amount to soften the "
-                        "--attribution-prior-frequency-limit by", default=0.2)
-
-    parser.add_argument('--attribution-prior-grad-smooth-sigma', type=int, 
-                        help="amount to smooth the gradient before computing "
-                        "the loss", default=3)
-    
-    parser.add_argument('--attribution-prior-profile-grad-loss-weight', 
-                        type=float,  help="weight for the attribution "
-                        "prior loss computed on profile gradients", 
-                        default=200.0)
-
-    parser.add_argument('--attribution-prior-counts-grad-loss-weight', 
-                        type=float,  help="weight for the attribution "
-                        "prior loss computed on counts gradients", 
-                        default=100.0)
-
     return parser
 
 
@@ -296,13 +251,6 @@ def fastpredict_argsparser():
 
     parser.add_argument('--output-len', type=int, 
                         help="length of output profile", default=1000)
-    
-    # predict modes
-    parser.add_argument('--predict-peaks', action='store_true', 
-                        help="generate predictions only on the peaks "
-                        "contained in the .bed files from --input-data. "
-                        "If not specified tiled genome wide predictions "
-                        "are generated.")
 
     # reference params
     parser.add_argument('--reference-genome', type=str, required=True,
@@ -321,21 +269,10 @@ def fastpredict_argsparser():
     parser.add_argument('--model', type=str, required=True,
                         help="path to the .h5 model file")
     
-    parser.add_argument('--sequence_generator_name', type=str, required=True,
-                        help="the name of the sequence generator in mseqgen "
-                        "to use for batch generation")
-    
-    parser.add_argument('--stranded', action='store_true', 
-                        help="specify if the input data is stranded or "
-                        "unstranded")
-
-    parser.add_argument('--has-control', action='store_true', 
-                        help="specify if the input data has controls")
-    
-    # network params
-    parser.add_argument('--control-smoothing', nargs='+',
-                        help="sigma and window size for gaussian 1D smoothing "
-                        "of second control track", default=[7.0, 81])
+    parser.add_argument('--sequence-generator-name', type=str,
+                        help="the name of the sequence generator from "
+                        "mseqgen library that will be used to generate "
+                        "batches of data ", default='BPNet')
 
     # output params
     parser.add_argument('--output-window-size', type=int, required=True,
@@ -354,12 +291,7 @@ def fastpredict_argsparser():
                         help="specify if the predictions output should "
                         "be stored in a timestamped subdirectory within "
                         "--output-dir")
-    
-    parser.add_argument('--generate-predicted-profile-bigWigs', 
-                        action='store_true', 
-                        help="generate bigWig files for predicted profile"
-                        "tracks")
-    
+
     return parser
 
 
