@@ -45,12 +45,6 @@ def main():
     parser = argparsers.training_argsparser()
     args = parser.parse_args()
 
-    # input params
-    input_params = {}
-    input_params['data'] = args.input_data
-    input_params['stranded'] = args.stranded
-    input_params['has_control'] = args.has_control
-
     # output params 
     output_params = {}
     output_params['automate_filenames'] = args.automate_filenames
@@ -71,7 +65,6 @@ def main():
     batch_gen_params['sequence_generator_name'] = args.sequence_generator_name
     batch_gen_params['input_seq_len'] = args.input_seq_len
     batch_gen_params['output_len'] = args.output_len
-    batch_gen_params['sampling_mode'] = args.sampling_mode
     batch_gen_params['rev_comp_aug'] = args.reverse_complement_augmentation
     batch_gen_params['negative_sampling_rate'] = args.negative_sampling_rate
     batch_gen_params['max_jitter'] = args.max_jitter
@@ -95,26 +88,6 @@ def main():
     parallelization_params['threads'] = args.threads
     parallelization_params['gpus'] = args.gpus
     
-    # network params
-    network_params = {}
-    network_params['name'] = args.model_arch_name
-    network_params['filters'] = args.filters
-    network_params['counts_loss_weight'] = args.counts_loss_weight
-    network_params['control_smoothing'] = args.control_smoothing
-    
-    # attribution prior params
-    attribution_prior_params = {}
-    attribution_prior_params['frquency_limit'] = \
-        args.attribution_prior_frequency_limit
-    attribution_prior_params['limit_softness'] = \
-        args.attribution_prior_limit_softness
-    attribution_prior_params['grad_smooth_sigma'] = \
-        args.attribution_prior_grad_smooth_sigma
-    attribution_prior_params['profile_grad_loss_weight'] = \
-        args.attribution_prior_profile_grad_loss_weight
-    attribution_prior_params['counts_grad_loss_weight'] = \
-        args.attribution_prior_counts_grad_loss_weight
-    
     if not os.path.exists(output_params['output_dir']):
         raise NoTracebackException(
             "Directory {} does not exist".format(output_params['output_dir']))
@@ -135,7 +108,7 @@ def main():
             genome_params['chrom_sizes']))
         
     try:
-        get_model = getattr(model_archs, network_params['name'])
+        get_model = getattr(model_archs, args.model_arch_name)
     except AttributeError:
         raise NoTracebackException(
             "Network {} not found in model definitions".format(
@@ -150,9 +123,9 @@ def main():
     
     # training and validation
     training.train_and_validate_ksplits(
-        input_params, output_params, genome_params, batch_gen_params, 
-        hyper_params, parallelization_params, network_params, 
-        args.use_attribution_prior, attribution_prior_params, splits)
+        args.input_data, args.model_arch_name, args.model_arch_params_json, 
+        output_params, genome_params, batch_gen_params, hyper_params, 
+        parallelization_params, splits)
 
 if __name__ == '__main__':
     main()
