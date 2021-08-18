@@ -199,7 +199,7 @@ train \
     --has-control \
     --output-dir $MODEL_DIR \
     --reference-genome $REFERENCE_GENOME \
-    --chroms $(paste -s -d ' ' $reference_dir/hg38_chroms.txt) \
+    --chroms $(paste -s -d ' ' $REFERENCE_DIR/hg38_chroms.txt) \
     --chrom-sizes $CHROM_SIZES \
     --splits $CV_SPLITS \
     --model-arch-name BPNet1000d8 \
