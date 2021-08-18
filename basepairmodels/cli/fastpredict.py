@@ -2,6 +2,7 @@ import datetime
 import h5py
 import json
 import logging
+import math
 import numpy as np
 import os
 import pandas as pd
@@ -19,13 +20,36 @@ from basepairmodels.cli.metrics import mnll, profile_cross_entropy
 from mseqgen import generators
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
-from scipy.special import logsumexp
+from scipy.special import logsumexp, softmax
 from scipy.stats import pearsonr, spearmanr, multinomial
 from tqdm import tqdm
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import CustomObjectScope
 
 
+def _fix_sum_to_one(probs):
+    """
+      Fix probability arrays whose sum is fractinally above or 
+      below 1.0
+      
+      Args:
+          probs (numpy.ndarray): An array whose sum is almost equal
+              to 1.0
+              
+      Returns:
+          np.ndarray: array that sums to 1
+    """
+    
+    _probs = np.copy(probs)
+    
+    if np.sum(_probs) > 1.0:        
+        _probs[np.argmax(_probs)] -= np.sum(_probs) - 1.0    
+    
+    if np.sum(_probs) < 1.0:
+        _probs[np.argmin(_probs)] += 1.0 - np.sum(_probs)
+    
+    return _probs
+    
 def mnll_min_max_bounds(profile):
     """
         Min Max bounds for the mnll metric
@@ -40,13 +64,34 @@ def mnll_min_max_bounds(profile):
     uniform_profile = np.ones(len(profile)) * (1.0 / len(profile))
 
     # profile as probabilities
+    profile = profile.astype(np.float64)
+    
+    # profile as probabilities
     profile_prob = profile / np.sum(profile)
+    
+    # the scipy.stats.multinomial function is very sensitive to 
+    # profile_prob summing to exactly 1.0, if not you get NaN as the
+    # resuls. In majority of the cases we can fix that problem by
+    # adding or substracting the difference (but unfortunately it
+    # doesnt always and there are cases where we still see NaNs, and
+    # those we'll set to 0)
+    profile_prob = _fix_sum_to_one(profile_prob)
 
     # mnll of profile with itself
     min_mnll = mnll(profile, probs=profile_prob)
+    
+    # if we still find a NaN, even after the above fix, set it to zero
+    if math.isnan(min_mnll):
+        min_mnll = 0.0
+
+    if math.isinf(min_mnll):
+        min_mnll = 0.0
 
     # mnll of profile with uniform profile
     max_mnll = mnll(profile, probs=uniform_profile)
+    
+    if math.isnan(max_mnll):
+        print("max_mnll is nan")
 
     return (min_mnll, max_mnll)
 
@@ -70,7 +115,7 @@ def cross_entropy_min_max_bounds(profile):
 
     # mnll of profile with itself
     min_cross_entropy = profile_cross_entropy(profile, probs=profile_prob)
-
+    
     # mnll of profile with uniform profile
     max_cross_entropy = profile_cross_entropy(profile, probs=uniform_profile)
 
@@ -165,6 +210,7 @@ def metrics_update(
         true_profile_smooth_prob = true_profile_smooth / np.sum(
             true_profile_smooth)
         pred_profile_prob = pred_profile / np.sum(pred_profile)
+        pred_profile_prob = _fix_sum_to_one(pred_profile_prob)
 
         # metrics 
         # profile pearson & spearman
@@ -186,10 +232,11 @@ def metrics_update(
                 spearmanr(true_profile_smooth_prob, pred_profile_prob)[0])
             
         # mnll
-        metrics_tracker['profile_mnlls'].append(
-            min_max_normalize(
-                mnll(true_profile, probs=pred_profile_prob),  
-                mnll_min_max_bounds(true_profile)))
+        _mnll = np.nan_to_num(mnll(true_profile, probs=pred_profile_prob))
+        _mnll = min_max_normalize(_mnll, mnll_min_max_bounds(true_profile))
+        if math.isnan(_mnll):
+            print("found nan")
+        metrics_tracker['profile_mnlls'].append(_mnll)
 
         # cross entropy
         metrics_tracker['profile_cross_entropys'].append(
@@ -375,7 +422,7 @@ def predict(args, pred_dir):
             chroms.append(chrom)
             starts.append(start)
             ends.append(end)
-            
+
             # process predictions for each track
             for j in range(num_output_tracks):
 
@@ -482,43 +529,68 @@ def predict(args, pred_dir):
     with open(config_file, 'w') as fp:
         json.dump(vars(args), fp)
                     
-    # show metrics
-    print("mnll", 
-          np.min(metrics_tracker['profile_mnlls']), 
-          np.max(metrics_tracker['profile_mnlls']), 
-          np.median(metrics_tracker['profile_mnlls']))
+            
+    logging.info("\t\tmin\t\tmax\t\tmedian")
     
-    print("cross_entropy", 
-          np.min(metrics_tracker['profile_cross_entropys']), 
-          np.max(metrics_tracker['profile_cross_entropys']), 
-          np.median(metrics_tracker['profile_cross_entropys']))
-   
-    print("jsd", 
-          np.min(metrics_tracker['profile_jsds']), 
-          np.max(metrics_tracker['profile_jsds']), 
-          np.median(metrics_tracker['profile_jsds']))
+    logging.info("mnll\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format( 
+        np.min(metrics_tracker['profile_mnlls']), 
+        np.max(metrics_tracker['profile_mnlls']), 
+        np.median(metrics_tracker['profile_mnlls'])))
+                 
+    logging.info("cross_entropy\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_cross_entropys']), 
+        np.max(metrics_tracker['profile_cross_entropys']), 
+        np.median(metrics_tracker['profile_cross_entropys'])))
+    
+    logging.info("jsd\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_jsds']), 
+        np.max(metrics_tracker['profile_jsds']), 
+        np.median(metrics_tracker['profile_jsds'])))
+    
+    logging.info("pearson\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_mses']), 
+        np.max(metrics_tracker['profile_mses']), 
+        np.median(metrics_tracker['profile_mses'])))
+    
+    logging.info("spearman\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_pearsonrs']), 
+        np.max(metrics_tracker['profile_pearsonrs']), 
+        np.median(metrics_tracker['profile_pearsonrs'])))
+    
+    logging.info("mse\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_spearmanrs']),
+        np.max(metrics_tracker['profile_spearmanrs']), 
+        np.median(metrics_tracker['profile_spearmanrs'])))
+    
+    logging.info("==============================================")
+    counts_pearson = pearsonr(metrics_tracker['all_true_logcounts'], 
+                              metrics_tracker['all_pred_logcounts'])[0]
+    logging.info("counts pearson: {}".format(counts_pearson))
+    counts_spearman = spearmanr(metrics_tracker['all_true_logcounts'], 
+                                metrics_tracker['all_pred_logcounts'])[0]
+    logging.info("counts spearman: {}".format(counts_spearman))
 
-    print("mse", 
-          np.min(metrics_tracker['profile_mses']), 
-          np.max(metrics_tracker['profile_mses']), 
-          np.median(metrics_tracker['profile_mses']))
-
-    print("pearsonr", 
-          np.min(metrics_tracker['profile_pearsonrs']), 
-          np.max(metrics_tracker['profile_pearsonrs']), 
-          np.median(metrics_tracker['profile_pearsonrs']))
-    print("spearmanr", 
-          np.min(metrics_tracker['profile_spearmanrs']),
-          np.max(metrics_tracker['profile_spearmanrs']), 
-          np.median(metrics_tracker['profile_spearmanrs']))
-        
-    print("logcounts_pearson", 
-          pearsonr(metrics_tracker['all_true_logcounts'], 
-                   metrics_tracker['all_pred_logcounts'])[0])
-    print("logcounts_spearman", 
-          spearmanr(metrics_tracker['all_true_logcounts'], 
-                    metrics_tracker['all_pred_logcounts'])[0])
-
+    np.savez_compressed(
+        '{}/mnll'.format(args.output_dir), 
+        mnll=metrics_tracker['profile_mnlls'])
+    np.savez_compressed(
+        '{}/cross_entropy'.format(args.output_dir), 
+        cross_entropy=metrics_tracker['profile_cross_entropys'])
+    np.savez_compressed(
+        '{}/jsd'.format(args.output_dir), jsd=metrics_tracker['profile_jsds'])
+    np.savez_compressed(
+        '{}/mse'.format(args.output_dir), mse=metrics_tracker['profile_mses'])
+    np.savez_compressed(
+        '{}/pearson'.format(args.output_dir), 
+        pearson=metrics_tracker['profile_pearsonrs'])
+    np.savez_compressed(
+        '{}/spearman'.format(args.output_dir), 
+        spearman=metrics_tracker['profile_spearmanrs'])
+    np.savez_compressed('{}/counts_pearson'.format(args.output_dir), 
+                        counts_pearson=counts_pearson)
+    np.savez_compressed('{}/counts_spearman'.format(args.output_dir), 
+                        counts_spearman=counts_spearman)        
+         
 
 def predict_main():
     # parse the command line arguments
