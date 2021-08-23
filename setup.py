@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="basepairmodels",
-    version='0.1.3',
+    version='0.1.4',
     description=("BPNet: toolkit to learn motif synthax from high-resolution functional genomics data"
                  " using convolutional neural networks"),
     author="Zahoor Zafrulla",
@@ -19,7 +19,7 @@ setup(
                      "deepdish", "pandas", "matplotlib", "plotly", 
                      "deeptools", "pyfaidx", "modisco", "deeplift", "tqdm",
                      "shap @ git+https://github.com/AvantiShri/shap.git", 
-                     "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@v0.1.0"],
+                     "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@v0.1.3"],
    extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
     zip_safe=False,
@@ -43,7 +43,6 @@ setup(
             "embeddings = basepairmodels.cli.embeddings:embeddings_main",            
             "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
             "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main"
-#            "fastpredict = basepairmodels.cli.fastpredict:predict_main"
         ]
     }
 )
