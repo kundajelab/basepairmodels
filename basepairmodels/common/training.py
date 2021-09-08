@@ -287,7 +287,7 @@ def train_and_validate(
     # get an instance of the model
     logging.debug("New {} model".format(model_arch_name))
     get_model = getattr(archs, model_arch_name)
-    model = get_model(tasks, model_arch_params)
+    model = get_model(tasks, model_arch_params, name_prefix="main")
     
     # print out the model summary
     model.summary()
