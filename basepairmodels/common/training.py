@@ -321,8 +321,11 @@ def train_and_validate(
     }
     
     # we maintain a separate list to track validation losses to make it 
-    # easier for early stopping & learning rate updates
+    # easier for early stopping 
     val_losses = []
+    
+    # track validation losses for learning rate update 
+    val_losses_lr = []
     
     # track best loss so we can restore weights 
     best_loss = 1e6
@@ -361,6 +364,7 @@ def train_and_validate(
         val_loss = model.evaluate(
             val_generator, steps=val_steps, return_dict=True)
         val_losses.append(val_loss['loss'])
+        val_losses_lr.append(val_loss['loss'])
         val_end_time = time.time()
         custom_history['end_time'][str(epoch + 1)] = \
             time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(val_end_time))
@@ -391,12 +395,17 @@ def train_and_validate(
             break
 
         # lower learning rate if criteria are satisfied
+        current_lr = model.optimizer.learning_rate.numpy()
         new_lr = reduce_lr_on_plateau(
-            val_losses,
-            model.optimizer.learning_rate.numpy(),
+            val_losses_lr,
+            current_lr,
             factor=hyper_params['lr_reduction_factor'], 
             patience=hyper_params['reduce_lr_on_plateau_patience'],
             min_lr=hyper_params['min_learning_rate'])
+        
+        # reset the validation losses tracker for learning rate update
+        if new_lr != current_lr:
+            val_losses_lr = [val_losses_lr[-1]]
         
         # set the new learning rate
         model.optimizer.learning_rate.assign(new_lr)
