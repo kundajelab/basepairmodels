@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="basepairmodels",
-    version='0.2.0',
+    version='0.2.1',
     description=("BPNet: toolkit to learn motif synthax from high-resolution functional genomics data"
                  " using convolutional neural networks"),
     author="Zahoor Zafrulla",
@@ -19,7 +19,7 @@ setup(
                       "deeptools", "pyfaidx", "modisco==0.5.14.1", "deeplift", 
                       "shap @ git+https://github.com/AvantiShri/shap.git", 
                       "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
-                      "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git"],
+                      "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git@atac_dnase_bias_model"],
     extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
     zip_safe=False,
