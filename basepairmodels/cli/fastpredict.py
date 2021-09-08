@@ -547,21 +547,21 @@ def predict(args, pred_dir):
         np.max(metrics_tracker['profile_jsds']), 
         np.median(metrics_tracker['profile_jsds'])))
     
-    logging.info("pearson\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
-        np.min(metrics_tracker['profile_mses']), 
-        np.max(metrics_tracker['profile_mses']), 
-        np.median(metrics_tracker['profile_mses'])))
-    
     logging.info("spearman\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
         np.min(metrics_tracker['profile_pearsonrs']), 
         np.max(metrics_tracker['profile_pearsonrs']), 
         np.median(metrics_tracker['profile_pearsonrs'])))
     
-    logging.info("mse\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+    logging.info("pearson\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
         np.min(metrics_tracker['profile_spearmanrs']),
         np.max(metrics_tracker['profile_spearmanrs']), 
         np.median(metrics_tracker['profile_spearmanrs'])))
     
+    logging.info("mse\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format(
+        np.min(metrics_tracker['profile_mses']), 
+        np.max(metrics_tracker['profile_mses']), 
+        np.median(metrics_tracker['profile_mses'])))
+
     logging.info("==============================================")
     counts_pearson = pearsonr(metrics_tracker['all_true_logcounts'], 
                               metrics_tracker['all_pred_logcounts'])[0]
