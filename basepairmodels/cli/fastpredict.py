@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import sys
 import time
+import tensorflow as tf
 
 from basepairmodels.cli import argparsers
 from basepairmodels.cli import bigwigutils
@@ -625,7 +626,7 @@ def predict_main():
     # predict
     logging.info("Loading {}".format(args.model))
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL}):
+                            MultichannelMultinomialNLL, 'tf': tf}):
             
         predict(args, pred_dir)
     
