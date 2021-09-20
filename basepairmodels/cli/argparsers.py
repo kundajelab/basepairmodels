@@ -53,6 +53,10 @@ def training_argsparser():
                         help="path to json file containing params for the "
                         "model architecture", required=True)
 
+    parser.add_argument('--bias-model-arch-params-json', type=str,
+                        help="path to json file containing params for the "
+                        "bias model architecture")
+
     # parallelization params
     parser.add_argument('--threads', '-t', type=int,
                         help="number of parallel threads for batch "
@@ -129,6 +133,9 @@ def training_argsparser():
                         help="path to json file containing task information", 
                         required=True)
     
+    parser.add_argument('--bias-input-data', type=str,
+                        help="path to json file containing bias task "
+                        "information")
     return parser
 
 
@@ -523,7 +530,7 @@ def shap_scores_argsparser():
                         "the --bed-file has 'signalValue' in column 7 to use "
                         "for sorting.")
     
-    parser.add_argument('--control-info', type=str,
+    parser.add_argument('--input-data', type=str,
                         help="path to the input json file that has paths to "
                         "control bigWigs. The --task-id is matched with "
                         "'task_id' in the the json file to get the list of "
