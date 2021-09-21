@@ -124,45 +124,55 @@ def shap_scores(args, shap_dir):
     # if controls have been specified we to need open the control files
     # for reading
     control_bigWigs = []
-    if args.control_info is not None:
-        # load the control info json file
-        with open(args.control_info, 'r') as inp_json:
-            try:
-                input_data = json.loads(inp_json.read())
-            except Exception as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                raise NoTracebackException(
-                    exc_type.__name__ + ' ' + str(exc_value))
-               
-        logging.info("Opening control bigWigs ...")
-        # get the control bigWig for each task
-        for task in input_data:
-            if input_data[task]['task_id'] == args.task_id:
-                if 'control' in input_data[task].keys():
-                    control_bigWig_path = input_data[task]['control']
-                    
-                    # check if the file exists
-                    if not os.path.exists(control_bigWig_path):
-                        raise NoTracebackException(
-                            "File {} does not exist".format(
-                                control_bigWig_path))
-                    
-                    logging.info(control_bigWig_path)
-                    
-                    # open the bigWig and add the file object to the 
-                    # list
-                    control_bigWigs.append(pyBigWig.open(control_bigWig_path))
+    smoothing = []
+    # load the control info json file
+    with open(args.input_data, 'r') as inp_json:
+        try:
+            tasks = json.loads(inp_json.read())
+            tasks = {int(k): v for k, v in tasks.items()}
+        except json.decoder.JSONDecodeError:
+            raise NoTracebackException(
+                "Unable to load json file {}. Valid json expected. "
+                "Check the file for syntax errors.".format(
+                    args.input_data))
 
+    # get the control bigWig for each task
+    for task in tasks:
+        if task == args.task_id:
+            _control_bigWigs = tasks[task]['bias']['source']
+            _smoothing = tasks[task]['bias']['smoothing'][:]
+            
+            if len(_control_bigWigs) > 0:
+                logging.info("Opening control bigWigs ...")
+    
+            for control_bigWig_path in _control_bigWigs:
+
+                # check if the file exists
+                if not os.path.exists(control_bigWig_path):
+                    raise NoTracebackException(
+                        "File {} does not exist".format(
+                            control_bigWig_path))
+
+                logging.info(control_bigWig_path)
+
+                # open the bigWig and add the file object to the 
+                # list
+                control_bigWigs.append(pyBigWig.open(control_bigWig_path))
+
+            # add smoothing params if the input json has them
+            for smoothing_val in _smoothing:
+                if smoothing_val is not None:
+                    smoothing.append(smoothing_val)
+                    
+            
     # log of sum of counts of the control track
     # if multiple control files are specified this would be
     # log(sum(position_wise_sum_from_all_files))
     bias_counts_input = np.zeros((num_peaks, 1))
 
     # the control profile and the smoothed version of the control 
-    # profile (1 + 1 = 2, always :) )
-    # if multiple control files are specified, the control profile for
-    # each sample would be position_wise_sum_from_all_files
-    bias_profile_input = np.zeros((num_peaks, args.control_len, 2))
+    bias_profile_input = np.zeros((num_peaks, args.control_len, 
+                                   len(control_bigWigs) + len(smoothing)))
     
     ## IF NO CONTROL BIGWIGS ARE SPECIFIED THEN THE TWO NUMPY ARRAYS
     ## bias_counts_input AND bias_profile_input WILL REMAIN ZEROS
@@ -207,19 +217,18 @@ def shap_scores(args, shap_dir):
             for i in range(len(control_bigWigs)):
                 vals = np.nan_to_num(
                     control_bigWigs[i].values(row['chrom'], start, end))
-                bias_counts_input[idx, 0] += np.sum(vals)
-                bias_profile_input[idx, :, 0] += vals
+                bias_counts_input[idx, i] = np.log(np.sum(vals) + 1)
+                bias_profile_input[idx, :, i] = vals
             
-            # we need to take the log of the sum of counts
-            # we add 1 to avoid taking log of 0
-            # same as mseqgen does while generating batches
-            bias_counts_input[idx, 0] = np.log(bias_counts_input[idx, 0] + 1)
-                         
+
             # compute the smoothed control profile
-            sigma = float(args.control_smoothing[0])
-            window_width = int(args.control_smoothing[1])
-            bias_profile_input[idx, :, 1] = gaussian1D_smoothing(
-                bias_profile_input[idx, :, 0], sigma, window_width)
+            start_idx = len(control_bigWigs)
+            for i in range(len(smoothing)):
+                sigma = float(smoothing[i][0])
+                window_width = int(smoothing[i][1])
+                bias_profile_input[idx, :, start_idx + i] = \
+                    gaussian1D_smoothing(
+                        bias_profile_input[idx, :, i], sigma, window_width)
 
         # append to the list of sequences
         sequences.append(seq)
@@ -248,13 +257,19 @@ def shap_scores(args, shap_dir):
     # inline function to handle dinucleotide shuffling
     def data_func(model_inputs):
         rng = np.random.RandomState(args.seed)
-        return [dinuc_shuffle(model_inputs[0], args.num_shuffles, rng)] + \
+        dinucs =  [dinuc_shuffle(model_inputs[0], args.num_shuffles, rng)] + \
         [
             np.tile(
                 np.zeros_like(model_inputs[i]),
                 (args.num_shuffles,) + (len(model_inputs[i].shape) * (1,))
             ) for i in range(1, len(model_inputs))
         ]
+        
+        print('dinucs', dinucs[0].shape, len(dinucs))
+        return dinucs
+    
+    print('input', model.input[0.shape)
+    print('output', model.output[0].shape,  model.output[1].shape)
     
     # shap explainer for the counts head
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
@@ -340,8 +355,8 @@ def shap_scores_main():
             "File {} does not exist".format(args.bed_file))
     
     # if controls are specified check if the control_info json exists
-    if args.control_info is not None:
-        if not os.path.exists(args.control_info):
+    if args.input_data is not None:
+        if not os.path.exists(args.input_data):
             raise NoTracebackException(
                 "Input data file {} does not exist".format(args.control_info))
             
@@ -369,7 +384,7 @@ def shap_scores_main():
     # shap
     logging.info("Loading {}".format(args.model))
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL}):
+                            MultichannelMultinomialNLL, 'tf': tf}):
             
         shap_scores(args, shap_scores_dir)
 
