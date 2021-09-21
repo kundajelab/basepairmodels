@@ -38,6 +38,11 @@
 
 """
 
+# set random seed
+from numpy.random import seed
+seed(1234)
+from tensorflow import set_random_seed
+set_random_seed(1234)
 
 import copy
 import datetime
@@ -142,7 +147,8 @@ def reduce_lr_on_plateau(losses, current_lr, factor=0.5, patience=2,
 def train_and_validate(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
-    train_chroms, val_chroms, model_dir, suffix_tag=None):
+    train_chroms, val_chroms, model_dir, bias_input_data=None, 
+    bias_model_arch_params_json=None, suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -182,6 +188,11 @@ def train_and_validate(
             
             model_dir (str): the path to the output directory
             
+            bias_input_data (str): path to the bias tasks json file
+
+            bias_model_arch_params_json (str): path to json file 
+                containing bias model architecture params
+                
             suffix_tag (str): optional tag to add as a suffix to files
                 (model, log, history & config params files) created in
                 the model directory
@@ -226,6 +237,38 @@ def train_and_validate(
                 "Check the file for syntax errors.".format(
                     model_arch_params_json))
 
+    if bias_input_data is not None:
+        # load the bias json file
+        with open(bias_input_data, 'r') as inp_json:
+            try:
+                bias_tasks = json.loads(inp_json.read())
+                # since the json has keys as strings, we convert the 
+                # top level keys to int so we can used them later for
+                # indexing
+                #: dictionary of tasks for training
+                bias_tasks = {int(k): v for k, v in bias_tasks.items()}
+            except json.decoder.JSONDecodeError:
+                raise NoTracebackException(
+                    "Unable to load json file {}. Valid json expected. "
+                    "Check the file for syntax errors.".format(
+                        bias_input_data))
+                
+    if bias_model_arch_params_json is not None:
+        # make sure the bias params json file exists
+        if not os.path.isfile(bias_model_arch_params_json):
+            raise NoTracebackException(
+                "File not found: {} ".format(bias_model_arch_params_json))
+
+        # load the bias params json file
+        with open(bias_model_arch_params_json, 'r') as inp_json:
+            try:
+                bias_model_arch_params = json.loads(inp_json.read())
+            except json.decoder.JSONDecodeError:
+                raise NoTracebackException(
+                    "Unable to load json file {}. Valid json expected. "
+                    "Check the file for syntax errors.".format(
+                        bias_model_arch_params_json))
+    
     # filename to write debug logs
     if suffix_tag is not None:
         logfname = '{}/trainer_{}.log'.format(model_dir, suffix_tag)
@@ -287,7 +330,12 @@ def train_and_validate(
     # get an instance of the model
     logging.debug("New {} model".format(model_arch_name))
     get_model = getattr(archs, model_arch_name)
-    model = get_model(tasks, model_arch_params, name_prefix="main")
+    if model_arch_name == "BPNet_ATAC_DNase":
+        model = get_model(
+            tasks, bias_tasks, model_arch_params, bias_model_arch_params, 
+            name_prefix="main")
+    else:        
+        model = get_model(tasks, model_arch_params, name_prefix="main")
     
     # print out the model summary
     model.summary()
@@ -492,7 +540,7 @@ def train_and_validate(
 def train_and_validate_ksplits(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
-    splits):
+    splits, bias_input_data=None, bias_model_arch_params_json=None):
 
     """
         Train and validate on one or more train/val splits
@@ -523,6 +571,12 @@ def train_and_validate_ksplits(
             
             splits (str): path to the json file containing train & 
                 validation splits
+            
+            bias_input_data (str): path to the bias tasks json file
+
+            bias_model_arch_params_json (str): path to json file 
+                containing bias model architecture params
+
     """
     
     # list of chromosomes after removing the excluded chromosomes
@@ -591,8 +645,8 @@ def train_and_validate_ksplits(
             target=train_and_validate, 
             args=[input_data, model_arch_name, model_arch_params_json,
                   output_params, genome_params, batch_gen_params, hyper_params,
-                  parallelization_params, train_chroms, val_chroms, model_dir, 
-                  split_tag])
+                  parallelization_params, train_chroms, val_chroms, model_dir,
+                  bias_input_data, bias_model_arch_params_json, split_tag])
         p.start()
         
         # wait for the process to finish
