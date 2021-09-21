@@ -29,6 +29,11 @@
 
 """
 
+# set random seed
+from numpy.random import seed
+seed(1234)
+from tensorflow import set_random_seed
+set_random_seed(1234)
 
 import json
 import logging
@@ -37,7 +42,8 @@ import sys
 
 from basepairmodels.cli import argparsers
 from basepairmodels.cli.exceptionhandler import NoTracebackException
-from basepairmodels.common import model_archs, training
+from basepairmodels.common import training
+from genomicsdlarchsandlosses.bpnet import archs
 
 
 def main():
@@ -108,11 +114,11 @@ def main():
             genome_params['chrom_sizes']))
         
     try:
-        get_model = getattr(model_archs, args.model_arch_name)
+        get_model = getattr(archs, args.model_arch_name)
     except AttributeError:
         raise NoTracebackException(
             "Network {} not found in model definitions".format(
-                network_params['name']))
+                args.model_arch_name))
     
     if not os.path.isfile(args.splits):
         raise NoTracebackException("File not found: {}", args.splits)
@@ -125,7 +131,8 @@ def main():
     training.train_and_validate_ksplits(
         args.input_data, args.model_arch_name, args.model_arch_params_json, 
         output_params, genome_params, batch_gen_params, hyper_params, 
-        parallelization_params, splits)
+        parallelization_params, splits, args.input_data, 
+        args.bias_model_arch_params_json)
 
 if __name__ == '__main__':
     main()
