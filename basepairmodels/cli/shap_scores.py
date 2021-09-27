@@ -168,7 +168,8 @@ def shap_scores(args, shap_dir):
     # log of sum of counts of the control track
     # if multiple control files are specified this would be
     # log(sum(position_wise_sum_from_all_files))
-    bias_counts_input = np.zeros((num_peaks, 1))
+    bias_counts_input = np.zeros((num_peaks, 
+                                  len(control_bigWigs) + len(smoothing)))
 
     # the control profile and the smoothed version of the control 
     bias_profile_input = np.zeros((num_peaks, args.control_len, 
@@ -265,12 +266,11 @@ def shap_scores(args, shap_dir):
             ) for i in range(1, len(model_inputs))
         ]
         
-        print('dinucs', dinucs[0].shape, len(dinucs))
         return dinucs
     
     # shap explainer for the counts head
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
-        ([model.input[0], model.input[1]], 
+        ([model.input[0], model.input[2]], 
          tf.reduce_sum(model.outputs[1], axis=-1)),
         data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
@@ -279,7 +279,7 @@ def shap_scores(args, shap_dir):
     weightedsum_meannormed_logits = get_weightedsum_meannormed_logits(
         model, task_id=args.task_id, stranded=True)
     profile_model_profile_explainer = shap.explainers.deep.TFDeepExplainer(
-        ([model.input[0], model.input[2]], weightedsum_meannormed_logits),
+        ([model.input[0], model.input[1]], weightedsum_meannormed_logits),
         data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
 
