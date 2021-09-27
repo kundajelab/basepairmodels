@@ -268,9 +268,6 @@ def shap_scores(args, shap_dir):
         print('dinucs', dinucs[0].shape, len(dinucs))
         return dinucs
     
-    print('input', model.input[0.shape)
-    print('output', model.output[0].shape,  model.output[1].shape)
-    
     # shap explainer for the counts head
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
         ([model.input[0], model.input[1]], 
