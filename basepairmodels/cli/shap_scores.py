@@ -13,7 +13,10 @@ from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.shaputils import *
 from basepairmodels.cli.logger import *
-from basepairmodels.cli.losses import MultichannelMultinomialNLL
+from genomicsdlarchsandlosses.bpnet.attribution_prior \
+    import AttributionPriorModel
+from genomicsdlarchsandlosses.bpnet.losses import \
+MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen.sequtils import one_hot_encode
 from mseqgen.utils import gaussian1D_smoothing
 from tensorflow.keras.models import load_model
@@ -381,7 +384,9 @@ def shap_scores_main():
     # shap
     logging.info("Loading {}".format(args.model))
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL, 'tf': tf}):
+                            MultichannelMultinomialNLL, 'tf': tf,  
+                            'CustomMeanSquaredError': CustomMeanSquaredError,
+                            'AttributionPriorModel': AttributionPriorModel}):
             
         shap_scores(args, shap_scores_dir)
 
