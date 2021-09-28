@@ -16,8 +16,11 @@ from basepairmodels.cli import logger
 
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
-from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
 from basepairmodels.cli.metrics import mnll, profile_cross_entropy
+from genomicsdlarchsandlosses.bpnet.attribution_prior \
+    import AttributionPriorModel
+from genomicsdlarchsandlosses.bpnet.losses import \
+MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen import generators
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import jensenshannon
@@ -626,7 +629,9 @@ def predict_main():
     # predict
     logging.info("Loading {}".format(args.model))
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL, 'tf': tf}):
+                            MultichannelMultinomialNLL, 'tf': tf,  
+                            'CustomMeanSquaredError': CustomMeanSquaredError,
+                            'AttributionPriorModel': AttributionPriorModel}):
             
         predict(args, pred_dir)
     

@@ -58,10 +58,10 @@ import warnings
 
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
-from basepairmodels.cli.losses import MultichannelMultinomialNLL
 from basepairmodels.cli import experiments
 from basepairmodels.cli import logger
 from genomicsdlarchsandlosses.bpnet import archs
+from genomicsdlarchsandlosses.bpnet.losses import MultichannelMultinomialNLL, CustomMeanSquaredError
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from mseqgen import generators 
@@ -345,7 +345,8 @@ def train_and_validate(
     logging.info("loss weights - {}".format(model_arch_params['loss_weights']))
     model.compile(Adam(learning_rate=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
-                        train_gen._total_signal_tracks), 'mse'], 
+                        train_gen._total_signal_tracks), 
+                          CustomMeanSquaredError()], 
                     loss_weights=model_arch_params['loss_weights'])
     
     # begin time for training
