@@ -792,3 +792,44 @@ def counts_loss_weight_argsparser():
                         "script")
     
     return parser
+
+
+def outliers_argsparser():
+    """ Command line arguments for the outliers script
+
+        Returns:
+            argparse.ArgumentParser
+    """
+
+    parser = argparse.ArgumentParser()
+        
+    parser.add_argument('--input-data', '-i', type=str, required=True,
+                        help="path to json file containing task information")
+    
+    parser.add_argument('--quantile', '-q', type=float,
+                        help="the quantile cut off values", default=0.99)
+    
+    parser.add_argument('--quantile-value-scale-factor', '-s', type=float, 
+                        default=1.2,
+                        help="scale factor to apply to signal value at "
+                        "--quantile quantile, which will be used to "
+                        "remove outliers")
+    
+    parser.add_argument('--task', '-t', type=str, default="0",
+                        help="the task in the --input-data to apply "
+                        "outlier removal")
+    
+    parser.add_argument('--chrom-sizes', '-c', type=str, required=True,
+                        help="path to chromosome sizes file")
+    
+    parser.add_argument('--chroms', nargs='+', required=True,
+                        help="list of chromosomes to consider for "
+                        "outlier removal")
+
+    parser.add_argument('--sequence-len', type=int, default=2114,
+                        help="length of input ")
+
+    parser.add_argument('--output-bed', type=str, required=True,
+                        help="Path to the output bed file")
+        
+    return parser

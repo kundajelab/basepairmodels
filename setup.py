@@ -43,7 +43,8 @@ setup(
             "embeddings = basepairmodels.cli.embeddings:embeddings_main",            
             "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
             "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main",
-            "fastpredict = basepairmodels.cli.fastpredict:predict_main"
+            "fastpredict = basepairmodels.cli.fastpredict:predict_main",
+            "outliers = basepairmodels.cli.outliers:outliers_main"
         ]
     }
 )
