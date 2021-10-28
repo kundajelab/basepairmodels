@@ -826,8 +826,8 @@ def outliers_argsparser():
                         help="list of chromosomes to consider for "
                         "outlier removal")
 
-    parser.add_argument('--sequence-len', type=int, default=2114,
-                        help="length of input ")
+    parser.add_argument('--sequence-len', type=int, default=1000,
+                        help="length of output")
 
     parser.add_argument('--output-bed', type=str, required=True,
                         help="Path to the output bed file")
