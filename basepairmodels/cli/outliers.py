@@ -79,8 +79,8 @@ def getPeakPositions(task, chroms, chrom_sizes, flank, drop_duplicates=False):
 
         # append to all peaks data frame
         allPeaks = allPeaks.append(peaks_df[
-            ['chrom', 'start', 'end', 'name', 'weight', 'strand', 'signal', 
-             'p', 'q', 'summit']])
+            ['chrom', 'st', 'e', 'start', 'end', 'name', 'weight', 'strand', 
+             'signal', 'p', 'q', 'summit']])
 
         allPeaks = allPeaks.reset_index(drop=True)
     
@@ -192,7 +192,7 @@ def outliers_main():
                 
     # save the new dataframe
     logging.info("Saving output bed file ... {}".format(args.output_bed))
-    peaks_df = peaks_df[['chrom', 'start', 'end', 'name', 'weight', 
+    peaks_df = peaks_df[['chrom', 'st', 'e', 'name', 'weight', 
                          'strand', 'signal', 'p', 'q', 'summit']]
     peaks_df.to_csv(args.output_bed, header=None, sep='\t', index=False)
                 
