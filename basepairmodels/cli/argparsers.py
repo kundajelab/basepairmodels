@@ -829,6 +829,9 @@ def outliers_argsparser():
     parser.add_argument('--sequence-len', type=int, default=1000,
                         help="length of output")
 
+    parser.add_argument('--blacklist', type=str, 
+                        help="Path to blacklist bed file")
+
     parser.add_argument('--output-bed', type=str, required=True,
                         help="Path to the output bed file")
         

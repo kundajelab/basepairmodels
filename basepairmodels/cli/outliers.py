@@ -92,6 +92,53 @@ def getPeakPositions(task, chroms, chrom_sizes, flank, drop_duplicates=False):
     return allPeaks
 
 
+def remove_blacklist_peaks(peaks_df, blacklist_df):
+    """
+        Function to remove peaks that overlap with blacklist regions
+        
+        Args:
+            peaks_df (pandas.Dataframe): 10 column dataframe of peaks
+            blacklist_df (pandas.Dataframe): 3 column dataframe of 
+                blacklist regions
+                
+        Returns:
+            pandas.Dataframe: 10 column dataframe 
+            
+    """
+    
+    def check_blacklist(chrom, start, end, blacklist_df):
+        """
+            Check if a given chromosome region overlaps with the 
+            blacklist regions
+            
+            Args:
+                chrom (str): chromosome name
+                start (int): start coordinate
+                end (int): end coordinate
+                blacklist_df (pandas.Dataframe): 3 column dataframe of 
+                    blacklist regions
+            
+            Returns:
+                boolean: True if chromosome regions overlaps with 
+                    blacklist regions
+        """
+
+        # check if either the start or the end coordinate lies within
+        # the blacklist region
+        in_blacklist =  (blacklist_df['chrom'] == chrom) & \
+            (((blacklist_df['st'] <= start) & (blacklist_df['e'] >= start)) | \
+             ((blacklist_df['st'] <= end) & (blacklist_df['e'] >= end)))
+        
+        return (sum(in_blacklist) > 0)
+
+    
+    peaks_df['in_blacklist'] = peaks_df.apply(
+        lambda x: check_blacklist(x.chrom, x.start, x.end, blacklist_df),
+        axis=1)
+
+    return peaks_df[peaks_df['in_blacklist'] == False]
+    
+
 def outliers_main():
     
     # parse the command line arguments
@@ -107,12 +154,12 @@ def outliers_main():
     # check if the input json file exists
     if not os.path.exists(args.input_data):
         raise NoTracebackException(
-            "Directory {} does not exist".format(args.input_data))
+            "File {} does not exist".format(args.input_data))
 
     # check if the chrom sizes file exists
     if not os.path.exists(args.chrom_sizes):
         raise NoTracebackException(
-            "Directory {} does not exist".format(args.chrom_sizes))
+            "File {} does not exist".format(args.chrom_sizes))
 
     chrom_sizes_df = pd.read_csv(
             args.chrom_sizes, sep='\t', header=None, names=['chrom', 'size'])
@@ -131,6 +178,21 @@ def outliers_main():
     peaks_df = getPeakPositions(
         tasks[args.task], args.chroms, chrom_sizes_df, args.sequence_len // 2, 
         drop_duplicates=True)
+    
+    # remove peaks that fall within blacklist regions
+    if args.blacklist != None:
+        # check if the blacklist file exists
+        if not os.path.exists(args.blacklist):
+            raise NoTracebackException(
+                "File {} does not exist".format(args.blacklist))
+
+        blacklist_df = pd.read_csv(args.blacklist, sep='\t', 
+                                   names=['chrom', 'st', 'e'])
+        
+        logging.info("Filtering blacklist peaks ...")
+        logging.info("old size {}".format(len(peaks_df)))
+        peaks_df = remove_blacklist_peaks(peaks_df, blacklist_df)
+        logging.info("new size {}".format(len(peaks_df)))
     
     # open all the signal bigWigs for reading
     signal_files = []
