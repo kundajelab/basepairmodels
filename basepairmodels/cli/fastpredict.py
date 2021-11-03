@@ -180,14 +180,16 @@ def min_max_normalize(metric_value, min_max_bounds, default=1.0):
 
 
 def metrics_update(
-    metrics_tracker, true_profile, true_logcounts, pred_profile,
-    pred_logcounts, true_profile_smoothing=[7.0, 81]):
+    metrics_tracker, example_idx, track_idx, true_profile, true_logcounts,
+    pred_profile, pred_logcounts, true_profile_smoothing=[7.0, 81]):
     """
         Update metrics with new true/predicted profile & counts
         
         Args:
             metrics_tracker (dict): dictionary to track & update 
                 metrics info 
+            example_idx (int): index of the example to be updated
+            track_idx (int): index of the ith track to be updated
             true_profile (numpy.ndarray): ground truth profile
             true_counts (float): sum of true profile
             pred_profile (numpy.ndarray): predicted profile output
@@ -226,50 +228,42 @@ def metrics_update(
         # If true then pearson correlation is undefined 
         if np.unique(true_profile_smooth_prob).size == 1 or \
             np.unique(pred_profile_prob).size == 1:
-            metrics_tracker['profile_pearsonrs'].append(0)
-            metrics_tracker['profile_spearmanrs'].append(0)
+            metrics_tracker['profile_pearsonrs'][example_idx, track_idx] = 0
+            metrics_tracker['profile_spearmanrs'][example_idx, track_idx] = 0
         else:
-            metrics_tracker['profile_pearsonrs'].append(
-                pearsonr(true_profile_smooth_prob, pred_profile_prob)[0])
+            metrics_tracker['profile_pearsonrs'][example_idx, track_idx] = \
+                pearsonr(true_profile_smooth_prob, pred_profile_prob)[0]
 
-            metrics_tracker['profile_spearmanrs'].append(
-                spearmanr(true_profile_smooth_prob, pred_profile_prob)[0])
+            metrics_tracker['profile_spearmanrs'][example_idx, track_idx] = \
+                spearmanr(true_profile_smooth_prob, pred_profile_prob)[0]
             
         # mnll
         _mnll = np.nan_to_num(mnll(true_profile, probs=pred_profile_prob))
         _mnll = min_max_normalize(_mnll, mnll_min_max_bounds(true_profile))
         if math.isnan(_mnll):
             print("found nan")
-        metrics_tracker['profile_mnlls'].append(_mnll)
+        metrics_tracker['profile_mnlls'][example_idx, track_idx] = _mnll
 
         # cross entropy
-        metrics_tracker['profile_cross_entropys'].append(
+        metrics_tracker['profile_cross_entropys'][example_idx, track_idx] = \
             min_max_normalize(
                 profile_cross_entropy(true_profile, probs=pred_profile_prob), 
-                cross_entropy_min_max_bounds(true_profile)))
+                cross_entropy_min_max_bounds(true_profile))
 
         # jsd
-        metrics_tracker['profile_jsds'].append(
+        metrics_tracker['profile_jsds'][example_idx, track_idx] = \
             min_max_normalize(
                 jensenshannon(true_profile_smooth_prob, pred_profile_prob), 
-                jsd_min_max_bounds(true_profile)))
+                jsd_min_max_bounds(true_profile))
 
         # mse
-        metrics_tracker['profile_mses'].append(
-            np.square(np.subtract(true_profile, pred_profile)).mean())
-    else:
-        metrics_tracker['profile_pearsonrs'].append(0)
-        metrics_tracker['profile_spearmanrs'].append(0)
-        metrics_tracker['profile_mnlls'].append(0)
-        metrics_tracker['profile_cross_entropys'].append(0)
-        metrics_tracker['profile_jsds'].append(0)
-        metrics_tracker['profile_mses'].append(0)
+        metrics_tracker['profile_mses'][example_idx, track_idx] = \
+            np.square(np.subtract(true_profile, pred_profile)).mean()
         
-            
-
-        
-    metrics_tracker['all_true_logcounts'].append(true_logcounts)
-    metrics_tracker['all_pred_logcounts'].append(pred_logcounts)
+    metrics_tracker['all_true_logcounts'][example_idx, track_idx] = \
+        true_logcounts
+    metrics_tracker['all_pred_logcounts'][example_idx, track_idx] = \
+        pred_logcounts
 
 
 def predict(args, pred_dir):    
@@ -318,7 +312,7 @@ def predict(args, pred_dir):
     # "chrom" + '_' + start and is mapped to a running index of
     # the returned predictions
     # Since in 'test' mode the batch generator pads with extra rows
-    # this will ensure that wedont duplicate the predictions
+    # this will ensure that we dont duplicate the predictions
     coordinate_hash = {}
     
     # open h5 file for writing predictions    
@@ -366,16 +360,16 @@ def predict(args, pred_dir):
     
     metrics_tracker = {
         # profile metrics 
-        'profile_mnlls': [],
-        'profile_cross_entropys': [],
-        'profile_jsds': [],
-        'profile_mses': [],
-        'profile_pearsonrs': [],
-        'profile_spearmanrs': [],
+        'profile_mnlls': np.zeros((num_examples, num_output_tracks)),
+        'profile_cross_entropys': np.zeros((num_examples, num_output_tracks)),
+        'profile_jsds': np.zeros((num_examples, num_output_tracks)),
+        'profile_mses': np.zeros((num_examples, num_output_tracks)),
+        'profile_pearsonrs': np.zeros((num_examples, num_output_tracks)),
+        'profile_spearmanrs': np.zeros((num_examples, num_output_tracks)),
 
         # for counts correlation
-        'all_true_logcounts': [],
-        'all_pred_logcounts': []
+        'all_true_logcounts': np.zeros((num_examples, num_output_tracks)),
+        'all_pred_logcounts': np.zeros((num_examples, num_output_tracks))
     }
     
     # running counter to count all non repeating examples across
@@ -452,6 +446,8 @@ def predict(args, pred_dir):
 
                 metrics_update(
                     metrics_tracker,
+                    cnt_examples + cnt_batch_examples,
+                    j,
                     true_profiles[idx, :, j],
                     true_logcounts[idx, j],
                     pred_profiles[cnt_batch_examples, :, j],
@@ -567,11 +563,17 @@ def predict(args, pred_dir):
         np.median(metrics_tracker['profile_mses'])))
 
     logging.info("==============================================")
-    counts_pearson = pearsonr(metrics_tracker['all_true_logcounts'], 
-                              metrics_tracker['all_pred_logcounts'])[0]
+    counts_pearson = np.zeros(num_output_tracks)
+    counts_spearman = np.zeros(num_output_tracks)
+    for i in range(num_output_tracks):
+        counts_pearson[i] = pearsonr(
+            metrics_tracker['all_true_logcounts'][:, i], 
+            metrics_tracker['all_pred_logcounts'][:, i])[0]
+        counts_spearman[i] = spearmanr(
+            metrics_tracker['all_true_logcounts'][:, i], 
+            metrics_tracker['all_pred_logcounts'][:, i])[0]
+
     logging.info("counts pearson: {}".format(counts_pearson))
-    counts_spearman = spearmanr(metrics_tracker['all_true_logcounts'], 
-                                metrics_tracker['all_pred_logcounts'])[0]
     logging.info("counts spearman: {}".format(counts_spearman))
 
     np.savez_compressed(
