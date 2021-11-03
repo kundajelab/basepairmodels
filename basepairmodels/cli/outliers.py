@@ -88,7 +88,7 @@ def getPeakPositions(task, chroms, chrom_sizes, flank, drop_duplicates=False):
     # for the plus and minus strand tasks
     if drop_duplicates:
         allPeaks = allPeaks.drop_duplicates(ignore_index=True)
-        
+    
     return allPeaks
 
 
@@ -179,6 +179,10 @@ def outliers_main():
         tasks[args.task], args.chroms, chrom_sizes_df, args.sequence_len // 2, 
         drop_duplicates=True)
     
+    if args.global_sample_weight is not None:   
+        # set weight
+        peaks_df['weight'] = args.global_sample_weight
+        
     # remove peaks that fall within blacklist regions
     if args.blacklist != None:
         # check if the blacklist file exists

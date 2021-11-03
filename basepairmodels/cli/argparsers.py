@@ -835,4 +835,7 @@ def outliers_argsparser():
     parser.add_argument('--output-bed', type=str, required=True,
                         help="Path to the output bed file")
         
+    parser.add_argument('--global-sample-weight', type=float,
+                        help="sample weight for all peaks")
+        
     return parser
