@@ -312,6 +312,8 @@ def predict(args, pred_dir):
     
     # the dataframe of loci with chrom, start, end, pos, weight columns
     loci = test_gen.get_samples()
+    loci['output_start'] = loci['pos'] - args.output_len // 2
+    loci['output_end'] = loci['pos'] + args.output_len // 2
     
     # hash table keep track of predicted coordinates, the key is
     # "chrom" + '_' + start and is mapped to a running index of
@@ -503,7 +505,7 @@ def predict(args, pred_dir):
         
         logging.info('Generating predicted profile bigWigs ...')
 
-        logging.debug("predictions shape - {}".format(all_predictions.shape))
+        logging.info("predictions shape - {}".format(all_predictions.shape))
         
         # read the chrom sizes file into a pandas dataframe
         chrom_sizes_df = pd.read_csv(
@@ -520,16 +522,17 @@ def predict(args, pred_dir):
             size = chrom_sizes_df.at[chrom, 'size']
             header.append((chrom, int(size)))
 
-        logging.debug("bigWig HEADER - {}".format(header))
-        logging.debug("loci colums {}".format(loci.columns))
+        logging.info("bigWig HEADER - {}".format(header))
         
         for i in range(all_predictions.shape[-1]):
-            outfile_name = 'predictions_track_{}.bw'.format(i)
-            outstatsfile_name = 'predictions_track_{}_stats.txt'.format(i)
+            outfile_name = '{}/{}_predictions_track_{}.bw'.format(
+                args.output_dir, model_tag, i)
+            outstatsfile_name = '{}/{}_predictions_track_{}_stats.txt'.format(
+                args.output_dir, model_tag, i)
             write_bigwig(
                 all_predictions[:, :, i], 
-                loci[['chrom', 'start_coord',
-                     'end_coord', 'pos']].values.tolist(),
+                loci[['chrom', 'output_start',
+                     'output_end', 'pos']].values.tolist(),
                 header, outfile_name, outstatsfile_name)
 
     # write all the command line arguments to a json file
