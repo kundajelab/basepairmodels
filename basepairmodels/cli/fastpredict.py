@@ -14,9 +14,11 @@ from basepairmodels.cli import argparsers
 from basepairmodels.cli import bigwigutils
 from basepairmodels.cli import logger
 
+from basepairmodels.cli.bigwig_helper import write_bigwig
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.metrics import mnll, profile_cross_entropy
+
 from genomicsdlarchsandlosses.bpnet.attribution_prior \
     import AttributionPriorModel
 from genomicsdlarchsandlosses.bpnet.losses import \
@@ -308,6 +310,9 @@ def predict(args, pred_dir):
     # number of tracks in the prediction output 
     num_output_tracks = test_gen._total_signal_tracks
     
+    # the dataframe of loci with chrom, start, end, pos, weight columns
+    loci = test_gen.get_samples()
+    
     # hash table keep track of predicted coordinates, the key is
     # "chrom" + '_' + start and is mapped to a running index of
     # the returned predictions
@@ -354,6 +359,10 @@ def predict(args, pred_dir):
     true_logcounts_dset = pred_group.create_dataset(
         "true_logcounts", (num_examples, num_output_tracks), 
         dtype=float, compression="gzip")
+    
+    # numpy array to hold all predictions
+    all_predictions = np.zeros(
+        (num_examples, args.output_window_size, num_output_tracks))
     
     # begin time for predictions
     t1 = time.time()
@@ -475,6 +484,10 @@ def predict(args, pred_dir):
         coords_start_dset[start_idx:end_idx] = starts
         coords_end_dset[start_idx:end_idx] = ends
 
+        # populate the all_predictions 
+        all_predictions[start_idx:end_idx, :, :] = \
+            pred_profiles[:cnt_batch_examples]
+        
         # increment the total examples counter
         cnt_examples += cnt_batch_examples
 
@@ -486,50 +499,44 @@ def predict(args, pred_dir):
     logging.info('Elapsed Time: {} secs'.format(t2-t1))
     print('cnt_examples', cnt_examples)
 
-#     if args.generate_predicted_profile_bigWigs:
+    if args.generate_predicted_profile_bigWigs:
         
-#         chrom_sizes_df = pd.read_csv(
-#             args.chrom_sizes, sep='\t', header=None, names=['chrom', 'size']) 
-#         chrom_sizes_df = chrom_sizes_df.set_index('chrom')
-        
-#         h5_file = h5py.File(output_h5_fname, 'r')
+        logging.info('Generating predicted profile bigWigs ...')
 
-#         # construct header for the bigWig file
-#         header = []
-#         # sort chromosomes, to be consistent with how pandas sorts
-#         # chromosomes ... for e.g. chrom21 is < chrom8
-#         chroms = args.chroms[:]
-#         chroms.sort()
-#         for chrom in chroms:
-#             size = chrom_sizes_df.at[chrom, 'size']
-#             header.append((chrom, int(size)))
+        logging.debug("predictions shape - {}".format(all_predictions.shape))
+        
+        # read the chrom sizes file into a pandas dataframe
+        chrom_sizes_df = pd.read_csv(
+            args.chrom_sizes, sep='\t', header=None, names=['chrom', 'size']) 
+        chrom_sizes_df = chrom_sizes_df.set_index('chrom')
 
-# #         chrom_sizes_df = 
-#         model_tasks = test_gen.get_input_tasks()
-#         for model_task_name in model_tasks:
-#             task_id = model_tasks[model_task_name]['task_id']
-#             strand_id = model_tasks[model_task_name]['strand']
-            
-# #         # create new bigWig
+        # construct header for the bigWig file
+        header = []
+        # sort chromosomes, to be consistent with how pandas sorts
+        # chromosomes ... for e.g. chrom21 is < chrom8
+        chroms = args.chroms[:]
+        chroms.sort()
+        for chrom in chroms:
+            size = chrom_sizes_df.at[chrom, 'size']
+            header.append((chrom, int(size)))
+
+        logging.debug("bigWig HEADER - {}".format(header))
+        logging.debug("loci colums {}".format(loci.columns))
         
-# #         # write header
-        
-#             for chrom in chroms:
-#                 size = chrom_sizes_df.at[chrom, 'size']
-#                 h5_file['coords_chrom'] 
-                
-#                 indices = chrom_sizes_df[
-#                     chrom_sizes_df['chrom'] == chrom].index.values
-#                 log_pred_profs = h5_file['log_pred_profs'][
-#                     indices, task_id,:,strand_id]
-#                 print(chrom, log_pred_profs.shape)
-                
+        for i in range(all_predictions.shape[-1]):
+            outfile_name = 'predictions_track_{}.bw'.format(i)
+            outstatsfile_name = 'predictions_track_{}_stats.txt'.format(i)
+            write_bigwig(
+                all_predictions[:, :, i], 
+                loci[['chrom', 'start_coord',
+                     'end_coord', 'pos']].values.tolist(),
+                header, outfile_name, outstatsfile_name)
+
     # write all the command line arguments to a json file
     config_file = '{}/config.json'.format(pred_dir)
     with open(config_file, 'w') as fp:
         json.dump(vars(args), fp)
-                    
-            
+                                
     logging.info("\t\tmin\t\tmax\t\tmedian")
     
     logging.info("mnll\t\t{:0.3f}\t\t{:0.3f}\t\t{:0.3f}".format( 

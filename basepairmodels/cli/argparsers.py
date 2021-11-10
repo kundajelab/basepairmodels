@@ -299,6 +299,11 @@ def fastpredict_argsparser():
                         "be stored in a timestamped subdirectory within "
                         "--output-dir")
 
+    parser.add_argument('--generate-predicted-profile-bigWigs', 
+                        action='store_true', default=False, 
+                        help="specify if bigWig tracks of predictions should " 
+                        "be generated")
+    
     return parser
 
 
