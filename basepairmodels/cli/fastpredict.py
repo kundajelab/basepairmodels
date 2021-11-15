@@ -21,6 +21,8 @@ from basepairmodels.cli.metrics import mnll, profile_cross_entropy
 
 from genomicsdlarchsandlosses.bpnet.attribution_prior \
     import AttributionPriorModel
+from genomicsdlarchsandlosses.bpnet.custommodel \
+    import CustomModel
 from genomicsdlarchsandlosses.bpnet.losses import \
 MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen import generators
@@ -576,6 +578,10 @@ def predict(args, pred_dir):
     counts_pearson = np.zeros(num_output_tracks)
     counts_spearman = np.zeros(num_output_tracks)
     for i in range(num_output_tracks):
+        np.save('{}/true_logcounts_{}.npy'.format(args.output_dir, i), 
+                metrics_tracker['all_true_logcounts'][:, i])
+        np.save('{}/pred_logcounts_{}.npy'.format(args.output_dir, i), 
+                metrics_tracker['all_pred_logcounts'][:, i])
         counts_pearson[i] = pearsonr(
             metrics_tracker['all_true_logcounts'][:, i], 
             metrics_tracker['all_pred_logcounts'][:, i])[0]
@@ -643,7 +649,8 @@ def predict_main():
     with CustomObjectScope({'MultichannelMultinomialNLL': 
                             MultichannelMultinomialNLL, 'tf': tf,  
                             'CustomMeanSquaredError': CustomMeanSquaredError,
-                            'AttributionPriorModel': AttributionPriorModel}):
+                            'AttributionPriorModel': AttributionPriorModel, 
+                            'CustomModel': CustomModel}):
             
         predict(args, pred_dir)
     
