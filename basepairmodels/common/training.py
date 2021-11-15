@@ -357,10 +357,12 @@ def train_and_validate(
     custom_history = {
         'learning_rate': {},
         'loss': {},
+        'batch_loss': {},
         'profile_predictions_loss': {},
         'logcounts_predictions_loss': {},
         'attribution_prior_loss': {},
         'val_loss': {},
+        'val_batch_loss': {},
         'val_profile_predictions_loss': {},
         'val_logcounts_predictions_loss': {},
         'val_attribution_prior_loss': {},
