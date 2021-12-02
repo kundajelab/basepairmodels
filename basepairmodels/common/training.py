@@ -51,6 +51,9 @@ import logging
 import multiprocessing as mp
 import os
 import pandas as pd
+import pyBigWig
+import pyfaidx
+import numpy as np
 import sys
 import tensorflow.keras.backend as kb
 import time
@@ -65,6 +68,7 @@ from genomicsdlarchsandlosses.bpnet.losses import MultichannelMultinomialNLL, Cu
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from mseqgen import generators 
+from mseqgen import sequtils
 
 
 def early_stopping_check(losses, patience=5, min_delta=1e-3):
@@ -143,12 +147,37 @@ def reduce_lr_on_plateau(losses, current_lr, factor=0.5, patience=2,
     
     return new_lr
 
+def adjust_bias_logcounts(bias_model, seqs, cts, logcounts_layer_name):
+    """
+    Given a bias model, sequences and associated counts, the function adds a 
+    constant to the output of the bias_model's logcounts that minimises squared
+    error between predicted logcounts and observed logcounts (infered from 
+    cts). This simply reduces to adding the average difference between observed 
+    and predicted to the "bias" (constant additive term) of the Dense layer.
+    Typically the seqs and counts would correspond to training nonpeak regions.
+    ASSUMES model_bias's last layer is a dense layer that outputs logcounts. 
+    This would change if you change the model.
+    """
+
+    logcounts_layer = bias_model.get_layer(logcounts_layer_name)
+    
+    logging.info("Bias model predictions ...")
+    _, pred_logcts = bias_model.predict(seqs, verbose=True)
+
+    delta = np.mean(np.log(1+cts.sum(-1)) - pred_logcts.ravel())
+
+    dw, db = logcounts_layer.get_weights()
+    logcounts_layer.set_weights([dw, db+delta])
+
+    return bias_model
+
 
 def train_and_validate(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     train_chroms, val_chroms, model_dir, bias_input_data=None, 
-    bias_model_arch_params_json=None, suffix_tag=None):
+    bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
+    suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -193,6 +222,11 @@ def train_and_validate(
             bias_model_arch_params_json (str): path to json file 
                 containing bias model architecture params
                 
+            adjust_bias_model_logcounts (boolean): True if you need to
+                adjust the the weights of the final Dense layer that 
+                predicts the logcounts when training a bias model for 
+                chromatin accessibility
+            
             suffix_tag (str): optional tag to add as a suffix to files
                 (model, log, history & config params files) created in
                 the model directory
@@ -491,6 +525,70 @@ def train_and_validate(
     # save HDF5 model file
     model.save(model_fname)
     logging.info("Finished saving model: {}".format(model_fname))
+    
+    if adjust_bias_model_logcounts:
+        # all peaks and non peaks
+        loci = train_gen.get_samples()
+        
+        # non-peaks only
+        nonpeaks_loci = loci[loci['weight'] == 0.0]
+        
+        if len(nonpeaks_loci) == 0:
+            logging.info("Non peaks length is 0. Bias model adjustment "
+                         "aborted.")
+        else:
+            # reference file to fetch sequences
+            fasta_ref = pyfaidx.Fasta(genome_params['reference_genome'])
+
+            #get all the bigWigs and peaks from the input_data
+            bigWigs = []
+            for task in tasks:
+                if 'signal' in tasks[task].keys():
+                    bigWigs.extend(tasks[task]['signal']["source"])
+
+            # open each bigwig and add file pointers to a list
+            fbigWigs = []
+            for bigWig in bigWigs:
+                fbigWigs.append(pyBigWig.open(bigWig))
+
+            # get sequences and logcounts
+            logging.info("Fetching non peak sequences and counts ...") 
+            sequences = []
+            logcounts = []
+            for _, row in nonpeaks_loci.iterrows():
+                # chrom, start and end
+                chrom = row['chrom']
+                start = row['pos'] - (batch_gen_params['input_seq_len'] // 2)
+                end = row['pos'] + (batch_gen_params['input_seq_len'] // 2)
+
+                # get the sequences
+                seq = fasta_ref[chrom][start:end].seq.upper()
+
+                # collect all the sequences into a list
+                sequences.append(seq)
+
+                # get the total counts
+                for i in range(len(fbigWigs)):
+                    bw = fbigWigs[i]
+                    logcounts.append(np.log(np.sum(
+                        np.nan_to_num(bw.values(chrom, start, end))) + 1))
+
+            fasta_ref.close()
+
+            # one hot encode the sequences
+            seqs = sequtils.one_hot_encode(
+                sequences, batch_gen_params['input_seq_len'])
+
+            adjusted_model = adjust_bias_logcounts(
+                model, seqs, np.array(logcounts), "logcounts_predictions")
+
+            # saving adjusted model
+            model_fname = model_fname.replace('.h5', '.adjusted.h5')
+
+            # save HDF5 model file
+            adjusted_model.save(model_fname)
+            logging.info(
+                "Finished saving adjusted model: {}".format(model_fname))
 
     # save history to json:  
     # Step 1. convert the custom history dict to a pandas DataFrame:  
@@ -543,7 +641,8 @@ def train_and_validate(
 def train_and_validate_ksplits(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
-    splits, bias_input_data=None, bias_model_arch_params_json=None):
+    splits, bias_input_data=None, bias_model_arch_params_json=None, 
+    adjust_bias_model_logcounts=False):
 
     """
         Train and validate on one or more train/val splits
@@ -649,7 +748,8 @@ def train_and_validate_ksplits(
             args=[input_data, model_arch_name, model_arch_params_json,
                   output_params, genome_params, batch_gen_params, hyper_params,
                   parallelization_params, train_chroms, val_chroms, model_dir,
-                  bias_input_data, bias_model_arch_params_json, split_tag])
+                  bias_input_data, bias_model_arch_params_json, 
+                  adjust_bias_model_logcounts, split_tag])
         p.start()
         
         # wait for the process to finish

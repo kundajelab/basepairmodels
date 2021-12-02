@@ -136,6 +136,14 @@ def training_argsparser():
     parser.add_argument('--bias-input-data', type=str,
                         help="path to json file containing bias task "
                         "information")
+    
+    # bias adjustment
+    parser.add_argument('--adjust-bias-model-logcounts', action='store_true', 
+                    help="if training a bias model for chromatin "
+                    "accessibility use this option to optionally adjust "
+                    "the weights of the final Dense layer that predicts the "
+                    "logcounts")
+
     return parser
 
 
