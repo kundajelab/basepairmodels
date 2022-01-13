@@ -17,6 +17,7 @@ setup(
                       "scipy", "scikit-image", "scikit-learn", 
                       "numpy", "deepdish", "pandas", "matplotlib", "plotly", 
                       "deeptools", "pyfaidx", "modisco==0.5.14.1", "deeplift", 
+                      "modisco @ git+https://github.com/kundajelab/tfmodisco@dev2",
                       "shap @ git+https://github.com/AvantiShri/shap.git", 
                       "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
                       "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git@atac_dnase_bias_model"],
