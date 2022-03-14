@@ -177,7 +177,8 @@ def train_and_validate(
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     train_chroms, val_chroms, model_dir, bias_input_data=None, 
     bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
-    is_background_model=False, suffix_tag=None):
+    is_background_model=False, mnll_loss_sample_weight=1.0, 
+    mnll_loss_background_sample_weight=0.0, suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -230,6 +231,12 @@ def train_and_validate(
             is_background_model (boolean): True if a background model
                 is to be trained using 'background_loci' samples from
                 the input json
+                
+            mnll_loss_sample_weight (float): weight for each (foreground)
+                training sample for computing mnll loss
+
+            mnll_loss_background_sample_weight (float): weight for each
+                background sample for computing mnll loss
                 
             suffix_tag (str): optional tag to add as a suffix to files
                 (model, log, history & config params files) created in
@@ -343,7 +350,9 @@ def train_and_validate(
                                train_chroms, 
                                num_threads=parallelization_params['threads'], 
                                batch_size=hyper_params['batch_size'], 
-                               background_only=is_background_model)
+                               background_only=is_background_model,
+                               foreground_weight=mnll_loss_sample_weight,
+                               background_weight=mnll_loss_background_sample_weight)
 
 
     # instantiate the batch generator class for validation
@@ -353,7 +362,9 @@ def train_and_validate(
                              val_chroms, 
                              num_threads=parallelization_params['threads'], 
                              batch_size=hyper_params['batch_size'], 
-                             background_only=is_background_model)
+                             background_only=is_background_model,
+                             foreground_weight=mnll_loss_sample_weight,
+                             background_weight=mnll_loss_background_sample_weight)
 
     # we need to calculate the number of training steps and 
     # validation steps in each epoch, fit/evaluate requires this
@@ -648,7 +659,8 @@ def train_and_validate_ksplits(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     splits, bias_input_data=None, bias_model_arch_params_json=None, 
-    adjust_bias_model_logcounts=False, is_background_model=False):
+    adjust_bias_model_logcounts=False, is_background_model=False, 
+    mnll_loss_sample_weight=1.0, mnll_loss_background_sample_weight=0.0):
 
     """
         Train and validate on one or more train/val splits
@@ -688,7 +700,12 @@ def train_and_validate_ksplits(
             is_background_model (boolean): True if a background model
                 is to be trained using 'background_loci' samples from
                 the input json
+                
+            mnll_loss_sample_weight (float): weight for each (foreground)
+                training sample for computing mnll loss
 
+            mnll_loss_background_sample_weight (float): weight for each
+                background sample for computing mnll loss
     """
     
     # list of chromosomes after removing the excluded chromosomes
@@ -759,7 +776,8 @@ def train_and_validate_ksplits(
                   output_params, genome_params, batch_gen_params, hyper_params,
                   parallelization_params, train_chroms, val_chroms, model_dir,
                   bias_input_data, bias_model_arch_params_json, 
-                  adjust_bias_model_logcounts, is_background_model,
+                  adjust_bias_model_logcounts, is_background_model, 
+                  mnll_loss_sample_weight, mnll_loss_background_sample_weight,
                   split_tag])
         p.start()
         

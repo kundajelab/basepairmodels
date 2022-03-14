@@ -149,7 +149,14 @@ def training_argsparser():
                     help="True if training a background model. Only "
                     "'background_loci' samples from the input json will "
                     "be used for training")
-
+    
+    parser.add_argument('--mnll-loss-sample-weight', type=float,
+                        help="weight for each (foreground) training sample "
+                        "for computing mnll loss", default=1.0)
+        
+    parser.add_argument('--mnll-loss-background-sample-weight', type=float,
+                        help="weight for each background sample for computing"
+                        "mnll loss", default=0.0)
     
     return parser
 

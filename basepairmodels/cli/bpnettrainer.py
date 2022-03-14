@@ -133,7 +133,8 @@ def main():
         output_params, genome_params, batch_gen_params, hyper_params, 
         parallelization_params, splits, args.input_data, 
         args.bias_model_arch_params_json, args.adjust_bias_model_logcounts,
-        args.is_background_model)
+        args.is_background_model, args.mnll_loss_sample_weight, 
+        args.mnll_loss_background_sample_weight)
 
 if __name__ == '__main__':
     main()
