@@ -177,7 +177,7 @@ def train_and_validate(
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     train_chroms, val_chroms, model_dir, bias_input_data=None, 
     bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
-    suffix_tag=None):
+    is_background_model=False, suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -227,6 +227,10 @@ def train_and_validate(
                 predicts the logcounts when training a bias model for 
                 chromatin accessibility
             
+            is_background_model (boolean): True if a background model
+                is to be trained using 'background_loci' samples from
+                the input json
+                
             suffix_tag (str): optional tag to add as a suffix to files
                 (model, log, history & config params files) created in
                 the model directory
@@ -338,7 +342,8 @@ def train_and_validate(
                                genome_params['chrom_sizes'],
                                train_chroms, 
                                num_threads=parallelization_params['threads'], 
-                               batch_size=hyper_params['batch_size'])
+                               batch_size=hyper_params['batch_size'], 
+                               background_only=is_background_model)
 
 
     # instantiate the batch generator class for validation
@@ -347,7 +352,8 @@ def train_and_validate(
                              genome_params['chrom_sizes'],
                              val_chroms, 
                              num_threads=parallelization_params['threads'], 
-                             batch_size=hyper_params['batch_size'])
+                             batch_size=hyper_params['batch_size'], 
+                             background_only=is_background_model)
 
     # we need to calculate the number of training steps and 
     # validation steps in each epoch, fit/evaluate requires this
@@ -642,7 +648,7 @@ def train_and_validate_ksplits(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     splits, bias_input_data=None, bias_model_arch_params_json=None, 
-    adjust_bias_model_logcounts=False):
+    adjust_bias_model_logcounts=False, is_background_model=False):
 
     """
         Train and validate on one or more train/val splits
@@ -678,6 +684,10 @@ def train_and_validate_ksplits(
 
             bias_model_arch_params_json (str): path to json file 
                 containing bias model architecture params
+                
+            is_background_model (boolean): True if a background model
+                is to be trained using 'background_loci' samples from
+                the input json
 
     """
     
@@ -749,7 +759,8 @@ def train_and_validate_ksplits(
                   output_params, genome_params, batch_gen_params, hyper_params,
                   parallelization_params, train_chroms, val_chroms, model_dir,
                   bias_input_data, bias_model_arch_params_json, 
-                  adjust_bias_model_logcounts, split_tag])
+                  adjust_bias_model_logcounts, is_background_model,
+                  split_tag])
         p.start()
         
         # wait for the process to finish

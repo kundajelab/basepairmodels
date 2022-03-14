@@ -144,6 +144,13 @@ def training_argsparser():
                     "the weights of the final Dense layer that predicts the "
                     "logcounts")
 
+    # background / foreground model & samples
+    parser.add_argument('--is-background-model', action='store_true', 
+                    help="True if training a background model. Only "
+                    "'background_loci' samples from the input json will "
+                    "be used for training")
+
+    
     return parser
 
 
