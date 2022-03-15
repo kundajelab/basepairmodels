@@ -247,15 +247,20 @@ def outliers_main():
     scaled_value = counts[quantile_idx] * args.quantile_value_scale_factor
     logging.info("scaled_value {}".format(scaled_value))
 
-    # index of values greater than scaled_value
-    max_idx = np.argmax(counts > scaled_value)
-    logging.info("max_idx {}".format(max_idx))    
-        
-    # trimmed data frame with outliers removed
-    logging.info("original size {}".format(len(peaks_df)))    
-    peaks_df = peaks_df[:max_idx]
-    logging.info("new size {}".format(len(peaks_df)))    
-                
+    # check if any of the counts are above the scale_value
+    if np.sum(counts > scaled_value) > 0:
+        # index of values greater than scaled_value
+        max_idx = np.argmax(counts > scaled_value)
+        logging.info("max_idx {}".format(max_idx))    
+
+        # trimmed data frame with outliers removed
+        logging.info("original size {}".format(len(peaks_df)))    
+        peaks_df = peaks_df[:max_idx]
+        logging.info("new size {}".format(len(peaks_df)))    
+    else:
+        logging.info("No outliers found based on criteria. "
+                     "Keeping original loci.")
+
     # save the new dataframe
     logging.info("Saving output bed file ... {}".format(args.output_bed))
     peaks_df = peaks_df[['chrom', 'st', 'e', 'name', 'weight', 
