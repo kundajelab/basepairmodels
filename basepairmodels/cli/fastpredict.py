@@ -98,9 +98,6 @@ def mnll_min_max_bounds(profile):
     # mnll of profile with uniform profile
     max_mnll = mnll(profile, probs=uniform_profile)
     
-    if math.isnan(max_mnll):
-        print("max_mnll is nan")
-
     return (min_mnll, max_mnll)
 
 
@@ -244,8 +241,6 @@ def metrics_update(
         # mnll
         _mnll = np.nan_to_num(mnll(true_profile, probs=pred_profile_prob))
         _mnll = min_max_normalize(_mnll, mnll_min_max_bounds(true_profile))
-        if math.isnan(_mnll):
-            print("found nan")
         metrics_tracker['profile_mnlls'][example_idx, track_idx] = _mnll
 
         # cross entropy
@@ -297,7 +292,7 @@ def predict(args, pred_dir):
     test_gen = BatchGenerator(
         args.input_data, batch_gen_params, args.reference_genome, 
         args.chrom_sizes, args.chroms, num_threads=args.threads, 
-        batch_size=args.batch_size)
+        batch_size=args.batch_size, epochs=1)
 
     # testing generator function
     test_generator = test_gen.gen()
@@ -314,8 +309,9 @@ def predict(args, pred_dir):
     
     # the dataframe of loci with chrom, start, end, pos, weight columns
     loci = test_gen.get_samples()
-    loci['output_start'] = loci['pos'] - args.output_len // 2
-    loci['output_end'] = loci['pos'] + args.output_len // 2
+
+    loci[0]['output_start'] = loci[0]['pos'] - args.output_len // 2
+    loci[0]['output_end'] = loci[0]['pos'] + args.output_len // 2
     
     # hash table keep track of predicted coordinates, the key is
     # "chrom" + '_' + start and is mapped to a running index of
@@ -404,7 +400,13 @@ def predict(args, pred_dir):
         pred_profiles = np.zeros(
             (args.batch_size, args.output_window_size, num_output_tracks))
         pred_logcounts = np.zeros((args.batch_size, num_output_tracks))
-        
+        # Since we are filtering out repeats in the coordinates
+        # the actual data points from true_profiles and true_logcounts
+        # may be different from the original arrays
+        _true_profiles = np.zeros(
+            (args.batch_size, args.output_window_size, num_output_tracks))
+        _true_logcounts = np.zeros((args.batch_size, num_output_tracks))            
+
         # lists for chrom positions for each batch
         chroms = []
         starts = []
@@ -454,19 +456,21 @@ def predict(args, pred_dir):
                     (np.exp(logcounts_prediction) - 1)
             
                 # true profile
-                true_profiles[cnt_batch_examples, :, j] = \
+                _true_profiles[cnt_batch_examples, :, j] = \
                     true_profiles[idx, _start:_end, j]
+                
+                # true logcounts
+                _true_logcounts[cnt_batch_examples, j] = \
+                    true_logcounts[idx, j]
 
                 metrics_update(
                     metrics_tracker,
                     cnt_examples + cnt_batch_examples,
                     j,
-                    true_profiles[idx, :, j],
-                    true_logcounts[idx, j],
+                    _true_profiles[cnt_batch_examples, :, j],
+                    _true_logcounts[cnt_batch_examples, j],
                     pred_profiles[cnt_batch_examples, :, j],
                     pred_logcounts[cnt_batch_examples, j])
-                
-                ### 
                 
             # increment the batch examples counter
             cnt_batch_examples += 1
@@ -480,9 +484,9 @@ def predict(args, pred_dir):
         pred_logcounts_dset[start_idx:end_idx, :] = \
             pred_logcounts[:cnt_batch_examples]
         true_profs_dset[start_idx:end_idx, :, :] = \
-            true_profiles[:cnt_batch_examples]
+            _true_profiles[:cnt_batch_examples]
         true_logcounts_dset[start_idx:end_idx, :] = \
-            true_logcounts[:cnt_batch_examples]
+            _true_logcounts[:cnt_batch_examples]
 
         coords_chrom_dset[start_idx:end_idx] = chroms
         coords_start_dset[start_idx:end_idx] = starts
@@ -501,7 +505,6 @@ def predict(args, pred_dir):
     # end time for writing predictions to hdf5 file
     t2 = time.time() 
     logging.info('Elapsed Time: {} secs'.format(t2-t1))
-    print('cnt_examples', cnt_examples)
 
     if args.generate_predicted_profile_bigWigs:
         
@@ -533,7 +536,7 @@ def predict(args, pred_dir):
                 args.output_dir, model_tag, i)
             write_bigwig(
                 all_predictions[:, :, i], 
-                loci[['chrom', 'output_start',
+                loci[0][['chrom', 'output_start',
                      'output_end', 'pos']].values.tolist(),
                 header, outfile_name, outstatsfile_name)
 
