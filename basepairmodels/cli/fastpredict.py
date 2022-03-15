@@ -384,7 +384,12 @@ def predict(args, pred_dir):
     # running counter to count all non repeating examples across
     # all batches
     cnt_examples = 0
-
+    
+    # lists for chrom positions from all batches combined
+    all_chroms = []
+    all_starts = []
+    all_ends = []
+        
     # run predict on each batch separately
     for batch in tqdm(test_generator, desc='batch', total=num_batches):
         
@@ -406,11 +411,6 @@ def predict(args, pred_dir):
         _true_profiles = np.zeros(
             (args.batch_size, args.output_window_size, num_output_tracks))
         _true_logcounts = np.zeros((args.batch_size, num_output_tracks))            
-
-        # lists for chrom positions for each batch
-        chroms = []
-        starts = []
-        ends = []
         
         # count the number of valid non repeating (padded examples)
         # in this batch
@@ -432,10 +432,10 @@ def predict(args, pred_dir):
             coordinate_hash[hash_key] = cnt_examples + cnt_batch_examples
             
             # append the chrom positions
-            chroms.append(chrom)
-            starts.append(start)
-            ends.append(end)
-
+            all_chroms.append(chrom)
+            all_starts.append(start)
+            all_ends.append(end)
+            
             # process predictions for each track
             for j in range(num_output_tracks):
 
@@ -488,9 +488,9 @@ def predict(args, pred_dir):
         true_logcounts_dset[start_idx:end_idx, :] = \
             _true_logcounts[:cnt_batch_examples]
 
-        coords_chrom_dset[start_idx:end_idx] = chroms
-        coords_start_dset[start_idx:end_idx] = starts
-        coords_end_dset[start_idx:end_idx] = ends
+        coords_chrom_dset[start_idx:end_idx] = all_chroms[start_idx:end_idx]
+        coords_start_dset[start_idx:end_idx] = all_starts[start_idx:end_idx]
+        coords_end_dset[start_idx:end_idx] = all_ends[start_idx:end_idx]
 
         # populate the all_predictions 
         all_predictions[start_idx:end_idx, :, :] = \
@@ -534,10 +534,12 @@ def predict(args, pred_dir):
                 args.output_dir, model_tag, i)
             outstatsfile_name = '{}/{}_predictions_track_{}_stats.txt'.format(
                 args.output_dir, model_tag, i)
+            
+            all_mids = list((np.array(all_starts) + np.array(all_ends)) // 2)
+            
             write_bigwig(
                 all_predictions[:, :, i], 
-                loci[0][['chrom', 'output_start',
-                     'output_end', 'pos']].values.tolist(),
+                list(zip(all_chroms, all_starts, all_ends, all_mids)),
                 header, outfile_name, outstatsfile_name)
 
     # write all the command line arguments to a json file
