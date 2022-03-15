@@ -529,14 +529,20 @@ def predict(args, pred_dir):
 
         logging.info("bigWig HEADER - {}".format(header))
         
+        # adjust starts and ends based on output window size
+        output_offset = (args.output_len - args.output_window_size) // 2
+        all_starts = list(np.array(all_starts) + output_offset)
+        all_ends = list(np.array(all_ends) - output_offset)
+            
+        # mid points
+        all_mids = list((np.array(all_starts) + np.array(all_ends)) // 2)
+
         for i in range(all_predictions.shape[-1]):
             outfile_name = '{}/{}_predictions_track_{}.bw'.format(
                 args.output_dir, model_tag, i)
             outstatsfile_name = '{}/{}_predictions_track_{}_stats.txt'.format(
                 args.output_dir, model_tag, i)
-            
-            all_mids = list((np.array(all_starts) + np.array(all_ends)) // 2)
-            
+    
             write_bigwig(
                 all_predictions[:, :, i], 
                 list(zip(all_chroms, all_starts, all_ends, all_mids)),
