@@ -16,7 +16,7 @@ setup(
                       "tensorflow-probability==0.12.2", "tqdm", "scikit-learn",
                       "scipy", "scikit-image", "scikit-learn", 
                       "numpy", "deepdish", "pandas", "matplotlib", "plotly", 
-                      "deeptools", "pyfaidx", "modisco==0.5.14.1", "deeplift", 
+                      "deeptools", "pyfaidx", "deeplift", 
                       "modisco @ git+https://github.com/kundajelab/tfmodisco@dev2",
                       "shap @ git+https://github.com/AvantiShri/shap.git", 
                       "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
