@@ -11,7 +11,6 @@ import time
 import tensorflow as tf
 
 from basepairmodels.cli import argparsers
-from basepairmodels.cli import bigwigutils
 from basepairmodels.cli import logger
 
 from basepairmodels.cli.bigwig_helper import write_bigwig
