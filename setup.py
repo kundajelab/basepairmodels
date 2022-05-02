@@ -34,17 +34,11 @@ setup(
     entry_points = {
         "console_scripts": [
             "train = basepairmodels.cli.bpnettrainer:main",
-            "predict = basepairmodels.cli.predict:predict_main",
-            "metrics = basepairmodels.cli.metrics:metrics_main",
-            "interpret = basepairmodels.cli.interpret:interpret_main",
-            "modisco = basepairmodels.cli.run_modisco:modisco_main",
-            "logits2profile = basepairmodels.cli.logits2profile:logits2profile_main",
-            "bounds = basepairmodels.cli.bounds:bounds_main",
-            "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main",
-            "embeddings = basepairmodels.cli.embeddings:embeddings_main",            
+            "fastpredict = basepairmodels.cli.fastpredict:predict_main",
             "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
             "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main",
-            "fastpredict = basepairmodels.cli.fastpredict:predict_main",
+            "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main",
+            "embeddings = basepairmodels.cli.embeddings:embeddings_main",
             "outliers = basepairmodels.cli.outliers:outliers_main"
         ]
     }
