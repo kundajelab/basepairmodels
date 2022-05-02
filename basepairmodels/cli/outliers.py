@@ -21,14 +21,12 @@ def getPeakPositions(task, chroms, chrom_sizes, flank, drop_duplicates=False):
             chroms (list): The list of required chromosomes
             chrom_sizes (pandas.Dataframe): dataframe of chromosome 
                 sizes with 'chrom' and 'size' columns
-            flank (int): Buffer size before & after the position to  
-                ensure we dont fetch values at index < 0 & > chrom size
+            flank (int): half of sequence length
             drop_duplicates (boolean): True if duplicates should be
                 dropped from returned dataframe. 
             
         Returns:
-            pandas.DataFrame: 
-                pruned dataframe of peak positions 
+            pandas.DataFrame: dataframe of peak positions 
             
     """
 
@@ -42,7 +40,7 @@ def getPeakPositions(task, chroms, chrom_sizes, flank, drop_duplicates=False):
     for peaks_file in task['loci']['source']:
 
         peaks_df = pd.read_csv(
-            peaks_file, sep='\t', header=None, 
+            peaks_file, sep='\t', header=None,
             names=['chrom', 'st', 'e', 'name', 'weight', 'strand', 
                    'signal', 'p', 'q', 'summit'])
 
@@ -102,7 +100,7 @@ def remove_blacklist_peaks(peaks_df, blacklist_df):
                 blacklist regions
                 
         Returns:
-            pandas.Dataframe: 10 column dataframe 
+            pandas.Dataframe: 10 column peaks dataframe 
             
     """
     
@@ -119,7 +117,7 @@ def remove_blacklist_peaks(peaks_df, blacklist_df):
                     blacklist regions
             
             Returns:
-                boolean: True if chromosome regions overlaps with 
+                boolean: True if chromosome region overlaps with 
                     blacklist regions
         """
 
@@ -131,11 +129,12 @@ def remove_blacklist_peaks(peaks_df, blacklist_df):
         
         return (sum(in_blacklist) > 0)
 
-    
+    # for each peak check if it overlaps with any blacklist region
     peaks_df['in_blacklist'] = peaks_df.apply(
         lambda x: check_blacklist(x.chrom, x.start, x.end, blacklist_df),
         axis=1)
 
+    # return peaks that dont overlap with blacklist regions
     return peaks_df[peaks_df['in_blacklist'] == False]
     
 
@@ -161,10 +160,11 @@ def outliers_main():
         raise NoTracebackException(
             "File {} does not exist".format(args.chrom_sizes))
 
+    # load the chrom sizes into a dataframe
     chrom_sizes_df = pd.read_csv(
             args.chrom_sizes, sep='\t', header=None, names=['chrom', 'size'])
 
-    # load the json file exists
+    # load the tasks json file
     with open(args.input_data, 'r') as inp_json:
         try:
             tasks = json.loads(inp_json.read())
@@ -174,13 +174,14 @@ def outliers_main():
                 "Check the file for syntax errors.".format(
                     tasks_json))
     
-    # get all peaks with start and end coordinates in a dataframe
+    # get all peaks for a given task in 10 column ENCODE narrowPeak
+    # format dataframe
     peaks_df = getPeakPositions(
         tasks[args.task], args.chroms, chrom_sizes_df, args.sequence_len // 2, 
         drop_duplicates=True)
     
+    # if a global sample weight is specified set it here
     if args.global_sample_weight is not None:   
-        # set weight
         peaks_df['weight'] = args.global_sample_weight
         
     # remove peaks that fall within blacklist regions
@@ -188,7 +189,7 @@ def outliers_main():
         # check if the blacklist file exists
         if not os.path.exists(args.blacklist):
             raise NoTracebackException(
-                "File {} does not exist".format(args.blacklist))
+                "Blacklist file {} does not exist".format(args.blacklist))
 
         blacklist_df = pd.read_csv(args.blacklist, sep='\t', 
                                    names=['chrom', 'st', 'e'])
@@ -208,11 +209,15 @@ def outliers_main():
                 
         signal_files.append(pyBigWig.open(signal_file))
 
-    # iterate through all peaks and read values from the bigWig files
+    # counts dictionary maintains a list of counts for each 
+    # peak for each of the signal files
+    # we will use this list to create a counts column for each of the
+    # signal files
     counts = {}
     for signal_file in signal_files:
         counts[signal_file] = []
     
+    # iterate through all peaks and read values from the bigWig files
     logging.info("Computing counts for each peak")
     for _, row in tqdm(peaks_df.iterrows(), desc='peaks', total=len(peaks_df)):
         chrom = row['chrom']
@@ -223,19 +228,19 @@ def outliers_main():
             counts[signal_file].append(
                 np.sum(np.nan_to_num(signal_file.values(chrom, start, end))))
                 
-    # add a new counts column to the peaks dataframe
+    # add a new counts column to the peaks dataframe for each
+    # signal file
     for signal_file in signal_files:
         peaks_df[signal_file] = counts[signal_file]
     
+    # average the counts across the signal files
     peaks_df['avg_counts'] = peaks_df[signal_files].mean(axis=1)
     
+    # sort the dataframe in ascending order of counts
     peaks_df = peaks_df.sort_values(by=['avg_counts'])
     
-    counts = peaks_df['avg_counts'].values            
-                
-    print(counts)
-
     # compute the quantile value
+    counts = peaks_df['avg_counts'].values
     nth_quantile = np.quantile(counts, args.quantile)
     logging.info("{} quantile {}".format(args.quantile, nth_quantile))
     
@@ -247,7 +252,7 @@ def outliers_main():
     scaled_value = counts[quantile_idx] * args.quantile_value_scale_factor
     logging.info("scaled_value {}".format(scaled_value))
 
-    # check if any of the counts are above the scale_value
+    # check if any of the counts are above the scaled_value
     if np.sum(counts > scaled_value) > 0:
         # index of values greater than scaled_value
         max_idx = np.argmax(counts > scaled_value)
@@ -269,4 +274,3 @@ def outliers_main():
                 
 if __name__ == '__main__':
     outliers_main()
-
