@@ -70,17 +70,20 @@ def get_recommended_counts_loss_weight(input_bigWigs, peaks,
             chrom = row['chrom']
             start = row['start']
             end = row['end']
-            total_counts += np.sum(
-                np.nan_to_num(bw.values(chrom, start, end)))
-        
-        total_peaks += peaks.shape[0]
-        
+            try:
+                total_counts += np.sum(
+                    np.nan_to_num(bw.values(chrom, start, end)))
+                total_peaks += 1
+            except RuntimeError as e:
+                # we ignore the chrom coordinates that give 
+                # Interval out of bounds error
+                continue
+                
     # average of the total counts
     n_obs = total_counts / float(total_peaks)
     
     return (alpha / 2.0) * n_obs
 
-            
             
         
         

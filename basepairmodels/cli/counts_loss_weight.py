@@ -89,18 +89,12 @@ def counts_loss_weight_main():
         # check to see if all are valid paths
         for bigWig in bigWigs:
             if not os.path.exists(bigWig):
-                # output the default value to stdout
-                print(args.default)
-
                 raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(bigWig, args.default))
         
     # if no peaks found
     if len(peaks) == 0:
-        # output the default value to stdout
-        print(args.default)
-
         raise NoTracebackException(
             "No 'peaks' files found. Using default weight {}".format(
                 args.default))
@@ -108,9 +102,6 @@ def counts_loss_weight_main():
         # check to see if all are valid paths
         for peak_file in peaks:
             if not os.path.exists(peak_file):
-                # output the default value to stdout
-                print(args.default)
-
                 raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(peak_file, args.default))
