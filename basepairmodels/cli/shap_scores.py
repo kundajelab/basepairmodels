@@ -15,6 +15,8 @@ from basepairmodels.cli.shaputils import *
 from basepairmodels.cli.logger import *
 from genomicsdlarchsandlosses.bpnet.attribution_prior \
     import AttributionPriorModel
+from genomicsdlarchsandlosses.bpnet.custommodel \
+    import CustomModel
 from genomicsdlarchsandlosses.bpnet.losses import \
 MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen.sequtils import one_hot_encode
@@ -82,6 +84,7 @@ def save_scores(peaks_df, one_hot_sequences, hyp_shap_scores, output_fname):
     
     f.close()
     
+
 def shap_scores(args, shap_dir):
     # load the model
     model = load_model(args.model)
@@ -386,7 +389,8 @@ def shap_scores_main():
     with CustomObjectScope({'MultichannelMultinomialNLL': 
                             MultichannelMultinomialNLL, 'tf': tf,  
                             'CustomMeanSquaredError': CustomMeanSquaredError,
-                            'AttributionPriorModel': AttributionPriorModel}):
+                            'AttributionPriorModel': AttributionPriorModel, 
+                            'CustomModel': CustomModel}):
             
         shap_scores(args, shap_scores_dir)
 
