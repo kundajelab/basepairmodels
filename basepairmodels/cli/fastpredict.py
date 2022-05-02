@@ -16,7 +16,6 @@ from basepairmodels.cli import logger
 from basepairmodels.cli.bigwig_helper import write_bigwig
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
-from basepairmodels.cli.metrics import mnll, profile_cross_entropy
 
 from genomicsdlarchsandlosses.bpnet.attribution_prior \
     import AttributionPriorModel
@@ -32,6 +31,118 @@ from scipy.stats import pearsonr, spearmanr, multinomial
 from tqdm import tqdm
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import CustomObjectScope
+
+
+def mnll(true_counts, logits=None, probs=None):
+    """
+        Compute the multinomial negative log-likelihood between true
+        counts and predicted values of a BPNet-like profile model
+        
+        One of `logits` or `probs` must be given. If both are
+        given `logits` takes preference.
+
+        Args:
+            true_counts (numpy.array): observed counts values
+            
+            logits (numpy.array): predicted logits values
+            
+            probs (numpy.array): predicted values as probabilities
+          
+        Returns:
+            float: cross entropy
+    
+    """
+
+    dist = None 
+    
+    if logits is not None:
+        
+        # check for length mismatch
+        if len(logits) != len(true_counts):
+            raise NoTracebackException(
+                "Length of logits does not match length of true_counts")
+        
+        # convert logits to softmax probabilities
+        probs = logits - logsumexp(logits)
+        probs = np.exp(probs)
+        
+    elif probs is not None:      
+        
+        # check for length mistmatch
+        if len(probs) != len(true_counts):
+            raise NoTracebackException(
+                "Length of probs does not match length of true_counts")
+        
+        # check if probs sums to 1
+        if abs(1.0 - np.sum(probs)) > 1e-3:
+            raise NoTracebackException(
+                "'probs' array does not sum to 1")   
+           
+    else:
+        
+        # both 'probs' and 'logits' are None
+        raise NoTracebackException(
+            "At least one of probs or logits must be provided. "
+            "Both are None.")
+  
+    # compute the nmultinomial distribution
+    mnom = multinomial(np.sum(true_counts), probs)
+    return -(mnom.logpmf(true_counts) / len(true_counts))
+    
+
+def profile_cross_entropy(true_counts, logits=None, probs=None):
+    """
+        Compute the cross entropy between true counts and predicted 
+        values of a BPNet-like profile model
+        
+        One of `logits` or `probs` must be given. If both are
+        given `logits` takes preference.
+
+        Args:
+            true_counts (numpy.array): observed counts values
+            
+            logits (numpy.array): predicted logits values
+            
+            probs (numpy.array): predicted values as probabilities
+          
+        Returns:
+            float: cross entropy
+    
+    """
+
+    if logits is not None:
+        
+        # check for length mismatch
+        if len(logits) != len(true_counts):
+            raise NoTracebackException(
+                "Length of logits does not match length of true_counts")
+        
+        # convert logits to softmax probabilities
+        probs = logits - logsumexp(logits)
+        probs = np.exp(probs)
+        
+    elif probs is not None:      
+        
+        # check for length mistmatch
+        if len(probs) != len(true_counts):
+            raise NoTracebackException(
+                "Length of probs does not match length of true_counts")
+        
+        # check if probs sums to 1
+        if abs(1.0 - np.sum(probs)) > 1e-3:
+            raise NoTracebackException(
+                "'probs' array does not sum to 1")        
+    else:
+        
+        # both 'probs' and 'logits' are None
+        raise NoTracebackException(
+            "At least one of probs or logits must be provided. "
+            "Both are None.")
+        
+    # convert true_counts to probabilities
+    true_counts_prob = true_counts / np.sum(true_counts)
+    
+    return -np.sum(np.multiply(true_counts_prob, np.log(probs + 1e-7)))
 
 
 def _fix_sum_to_one(probs):
