@@ -61,7 +61,6 @@ import warnings
 
 from basepairmodels.cli.bpnetutils import *
 from basepairmodels.cli.exceptionhandler import NoTracebackException
-from basepairmodels.cli import experiments
 from basepairmodels.cli import logger
 from genomicsdlarchsandlosses.bpnet import archs
 from genomicsdlarchsandlosses.bpnet.losses import MultichannelMultinomialNLL, CustomMeanSquaredError
