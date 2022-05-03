@@ -18,7 +18,7 @@ setup(
                       "numpy", "deepdish", "pandas", "matplotlib", "plotly", 
                       "deeptools", "pyfaidx", "deeplift", 
                       "modisco @ git+https://github.com/kundajelab/tfmodisco@dev2",
-                      "shap @ git+https://github.com/AvantiShri/shap.git", 
+                      "shap @ git+https://github.com/zahoorz/shap.git", 
                       "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
                       "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git@atac_dnase_bias_model"],
     extras_require={"dev": ["pytest", "pytest-cov"]},
