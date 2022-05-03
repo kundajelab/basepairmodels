@@ -19,7 +19,7 @@ setup(
                       "deeptools", "pyfaidx", "deeplift", 
                       "modisco @ git+https://github.com/kundajelab/tfmodisco@dev2",
                       "shap @ git+https://github.com/zahoorz/shap.git", 
-                      "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@new-tasks-format", 
+                      "mseqgen @ git+https://github.com/kundajelab/mseqgen.git@v1.0.0", 
                       "genomicsdlarchsandlosses @ git+https://github.com/kundajelab/genomics-DL-archsandlosses.git@atac_dnase_bias_model"],
     extras_require={"dev": ["pytest", "pytest-cov"]},
     license="MIT license",
