@@ -337,6 +337,10 @@ def motif_discovery_argsparser():
     parser.add_argument("--output-directory", type=str, 
                         help="Path to the output directory")
     
+    parser.add_argument("--max_seqlets", type=int, default=50000, 
+                        help="Max number of seqlets per metacluster "
+                        "for modisco")
+
     parser.add_argument('--modisco-window-size', type=int,
                         help="size of the window around the peak "
                         "coodrinate that will be considered for motif"
