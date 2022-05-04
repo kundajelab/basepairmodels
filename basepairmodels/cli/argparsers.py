@@ -407,7 +407,6 @@ def embeddings_argsparser():
                         help="name of compressed numpy file to store "
                         "the embeddings", default="embeddings.h5")
     
-    
     return parser
 
 

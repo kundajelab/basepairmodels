@@ -48,7 +48,12 @@
 from basepairmodels.cli.argparsers import embeddings_argsparser
 from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli.logger import *
-from basepairmodels.cli.losses import MultichannelMultinomialNLL, multinomial_nll
+from genomicsdlarchsandlosses.bpnet.attribution_prior \
+    import AttributionPriorModel
+from genomicsdlarchsandlosses.bpnet.custommodel \
+    import CustomModel
+from genomicsdlarchsandlosses.bpnet.losses import \
+MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen.sequtils import one_hot_encode
 
 from keras.models import Model, load_model
@@ -62,8 +67,7 @@ import numpy as np
 import os
 import pandas as pd
 import pysam
-
-
+import tensorflow as tf
 
 def get_sequences(chrom_positions, reference_genome_file, seq_len):
     """
@@ -101,7 +105,7 @@ def get_sequences(chrom_positions, reference_genome_file, seq_len):
         sequences.append(sequence)
                         
     # one hot encode all the sequences in the batch 
-    return one_hot_encode(sequences)
+    return one_hot_encode(sequences, seq_len)
 
     
 def dataframe_batcher(df, batch_size):
@@ -290,7 +294,10 @@ def embeddings_main():
     init_logger(logfname)
 
     with CustomObjectScope({'MultichannelMultinomialNLL': 
-                            MultichannelMultinomialNLL}):
+                            MultichannelMultinomialNLL, 'tf': tf,  
+                            'CustomMeanSquaredError': CustomMeanSquaredError,
+                            'AttributionPriorModel': AttributionPriorModel, 
+                            'CustomModel': CustomModel}):
         
         # load the model 
         model = load_model(args.model)
