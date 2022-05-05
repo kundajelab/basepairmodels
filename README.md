@@ -19,13 +19,9 @@ conda activate basepairmodels
 
 ### 3. Install basepairmodels
 
-Install the release version.
-
 ```
-pip install git+https://github.com/kundajelab/basepairmodels.git@v0.1.4
+pip install git+https://github.com/kundajelab/basepairmodels.git
 ```
-
-
 
 ## Tutorial on how to use the command line interface
 
@@ -313,7 +309,7 @@ fastpredict \
     --generate-predicted-profile-bigWigs
 ```
 
-This script with output test metrics and also output bigwig tracks if the 
+This script will output test metrics and also output bigwig tracks if the 
 `--generate-predicted-profile-bigWigs` is specified
 
 ### 4. Compute importance scores
