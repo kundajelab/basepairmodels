@@ -269,7 +269,7 @@ train \
     --output-len 1000 \
     --shuffle \
     --threads 10 \
-    --epochs 3 \
+    --epochs 100 \
     --learning-rate 0.004
 ```
 
