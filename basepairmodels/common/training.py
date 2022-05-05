@@ -38,6 +38,11 @@
 
 """
 
+# set random seed
+from numpy.random import seed
+seed(1234)
+from tensorflow.random import set_seed 
+set_seed(1234)
 
 import copy
 import datetime
@@ -46,19 +51,23 @@ import logging
 import multiprocessing as mp
 import os
 import pandas as pd
+import pyBigWig
+import pyfaidx
+import numpy as np
 import sys
 import tensorflow.keras.backend as kb
 import time
 import warnings
 
-from basepairmodels.common import model_archs
 from basepairmodels.cli.bpnetutils import *
-from basepairmodels.cli.losses import MultichannelMultinomialNLL
-from basepairmodels.cli import experiments
+from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.cli import logger
+from genomicsdlarchsandlosses.bpnet import archs
+from genomicsdlarchsandlosses.bpnet.losses import MultichannelMultinomialNLL, CustomMeanSquaredError
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from mseqgen import generators 
+from mseqgen import sequtils
 
 
 def early_stopping_check(losses, patience=5, min_delta=1e-3):
@@ -137,12 +146,38 @@ def reduce_lr_on_plateau(losses, current_lr, factor=0.5, patience=2,
     
     return new_lr
 
+def adjust_bias_logcounts(bias_model, seqs, cts, logcounts_layer_name):
+    """
+    Given a bias model, sequences and associated counts, the function adds a 
+    constant to the output of the bias_model's logcounts that minimises squared
+    error between predicted logcounts and observed logcounts (infered from 
+    cts). This simply reduces to adding the average difference between observed 
+    and predicted to the "bias" (constant additive term) of the Dense layer.
+    Typically the seqs and counts would correspond to training nonpeak regions.
+    ASSUMES model_bias's last layer is a dense layer that outputs logcounts. 
+    This would change if you change the model.
+    """
 
-def train_and_validate(input_params, output_params, genome_params, 
-                       batch_gen_params, hyper_params, parallelization_params, 
-                       network_params, use_attribution_prior, 
-                       attribution_prior_params, train_chroms, val_chroms, 
-                       model_dir, suffix_tag=None):
+    logcounts_layer = bias_model.get_layer(logcounts_layer_name)
+    
+    logging.info("Bias model predictions ...")
+    _, pred_logcts = bias_model.predict(seqs, verbose=True)
+
+    delta = np.mean(np.log(1+cts.sum(-1)) - pred_logcts.ravel())
+
+    dw, db = logcounts_layer.get_weights()
+    logcounts_layer.set_weights([dw, db+delta])
+
+    return bias_model
+
+
+def train_and_validate(
+    input_data, model_arch_name, model_arch_params_json, output_params, 
+    genome_params, batch_gen_params, hyper_params, parallelization_params, 
+    train_chroms, val_chroms, model_dir, bias_input_data=None, 
+    bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
+    is_background_model=False, mnll_loss_sample_weight=1.0, 
+    mnll_loss_background_sample_weight=0.0, suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -153,8 +188,14 @@ def train_and_validate(input_params, output_params, genome_params,
             http://
         
         Args:
-            input_params (dict): dictionary containing input parameters
+            input_data (str): path to the tasks json file
             
+            model_arch_name (str): name of the model definition 
+                function in the model_archs module
+                
+            model_arch_params_json (str): path to json file containing
+                model architecture params
+
             output_params (dict): dictionary containing output 
                 parameters
             
@@ -170,21 +211,32 @@ def train_and_validate(input_params, output_params, genome_params,
             parallelization_params (dict): dictionary containing
                 parameters for parallelization options
             
-            network_params (dict): dictionary containing parameters
-                specific to the deep learning architecture
-                
-            use_attribution_prior (bool): indicate whether attribution
-                prior loss model should be used
-
-            attribution_prior_params (dict): dictionary containing
-                attribution prior parameters
-            
             train_chroms (list): list of training chromosomes
             
             val_chroms (list): list of validation chromosomes
             
             model_dir (str): the path to the output directory
             
+            bias_input_data (str): path to the bias tasks json file
+
+            bias_model_arch_params_json (str): path to json file 
+                containing bias model architecture params
+                
+            adjust_bias_model_logcounts (boolean): True if you need to
+                adjust the the weights of the final Dense layer that 
+                predicts the logcounts when training a bias model for 
+                chromatin accessibility
+            
+            is_background_model (boolean): True if a background model
+                is to be trained using 'background_loci' samples from
+                the input json
+                
+            mnll_loss_sample_weight (float): weight for each (foreground)
+                training sample for computing mnll loss
+
+            mnll_loss_background_sample_weight (float): weight for each
+                background sample for computing mnll loss
+                
             suffix_tag (str): optional tag to add as a suffix to files
                 (model, log, history & config params files) created in
                 the model directory
@@ -193,6 +245,73 @@ def train_and_validate(input_params, output_params, genome_params,
              keras.models.Model
              
     """
+    
+    # make sure the input_data json file exists
+    if not os.path.isfile(input_data):
+        raise NoTracebackException(
+            "File not found: {} ".format(input_data))
+
+    # load the json file
+    with open(input_data, 'r') as inp_json:
+        try:
+            tasks = json.loads(inp_json.read())
+            # since the json has keys as strings, we convert the 
+            # top level keys to int so we can used them later for
+            # indexing
+            #: dictionary of tasks for training
+            tasks = {int(k): v for k, v in tasks.items()}
+        except json.decoder.JSONDecodeError:
+            raise NoTracebackException(
+                "Unable to load json file {}. Valid json expected. "
+                "Check the file for syntax errors.".format(
+                    input_data))
+                
+    # make sure the params json file exists
+    if not os.path.isfile(model_arch_params_json):
+        raise NoTracebackException(
+            "File not found: {} ".format(model_arch_params_json))
+            
+    # load the params json file
+    with open(model_arch_params_json, 'r') as inp_json:
+        try:
+            model_arch_params = json.loads(inp_json.read())
+        except json.decoder.JSONDecodeError:
+            raise NoTracebackException(
+                "Unable to load json file {}. Valid json expected. "
+                "Check the file for syntax errors.".format(
+                    model_arch_params_json))
+
+    if bias_input_data is not None:
+        # load the bias json file
+        with open(bias_input_data, 'r') as inp_json:
+            try:
+                bias_tasks = json.loads(inp_json.read())
+                # since the json has keys as strings, we convert the 
+                # top level keys to int so we can used them later for
+                # indexing
+                #: dictionary of tasks for training
+                bias_tasks = {int(k): v for k, v in bias_tasks.items()}
+            except json.decoder.JSONDecodeError:
+                raise NoTracebackException(
+                    "Unable to load json file {}. Valid json expected. "
+                    "Check the file for syntax errors.".format(
+                        bias_input_data))
+                
+    if bias_model_arch_params_json is not None:
+        # make sure the bias params json file exists
+        if not os.path.isfile(bias_model_arch_params_json):
+            raise NoTracebackException(
+                "File not found: {} ".format(bias_model_arch_params_json))
+
+        # load the bias params json file
+        with open(bias_model_arch_params_json, 'r') as inp_json:
+            try:
+                bias_model_arch_params = json.loads(inp_json.read())
+            except json.decoder.JSONDecodeError:
+                raise NoTracebackException(
+                    "Unable to load json file {}. Valid json expected. "
+                    "Check the file for syntax errors.".format(
+                        bias_model_arch_params_json))
     
     # filename to write debug logs
     if suffix_tag is not None:
@@ -224,29 +343,27 @@ def train_and_validate(input_params, output_params, genome_params,
     BatchGenerator = getattr(generators, sequence_generator_class_name)
 
     # instantiate the batch generator class for training
-    train_gen = BatchGenerator(input_params, train_batch_gen_params, 
+    train_gen = BatchGenerator(input_data, train_batch_gen_params, 
                                genome_params['reference_genome'], 
                                genome_params['chrom_sizes'],
                                train_chroms, 
-                               num_threads=parallelization_params['threads'],
-                               epochs=hyper_params['epochs'], 
+                               num_threads=parallelization_params['threads'], 
                                batch_size=hyper_params['batch_size'], 
-                               **network_params)
+                               background_only=is_background_model,
+                               foreground_weight=mnll_loss_sample_weight,
+                               background_weight=mnll_loss_background_sample_weight)
 
 
     # instantiate the batch generator class for validation
-    val_gen = BatchGenerator(input_params, val_batch_gen_params, 
+    val_gen = BatchGenerator(input_data, val_batch_gen_params, 
                              genome_params['reference_genome'], 
                              genome_params['chrom_sizes'],
                              val_chroms, 
-                             num_threads=parallelization_params['threads'],
-                             epochs=hyper_params['epochs'], 
+                             num_threads=parallelization_params['threads'], 
                              batch_size=hyper_params['batch_size'], 
-                             **network_params)
-
-    # lets make sure the sizes look reasonable
-    logging.info("TRAINING SIZE - {}".format(train_gen._samples.shape))
-    logging.info("VALIDATION SIZE - {}".format(val_gen._samples.shape))
+                             background_only=is_background_model,
+                             foreground_weight=mnll_loss_sample_weight,
+                             background_weight=mnll_loss_background_sample_weight)
 
     # we need to calculate the number of training steps and 
     # validation steps in each epoch, fit/evaluate requires this
@@ -261,32 +378,26 @@ def train_and_validate(input_params, output_params, genome_params,
     logging.info("VALIDATION STEPS - {}".format(val_steps))
 
     # get an instance of the model
-    logging.debug("New {} model".format(network_params['name']))
-    get_model = getattr(model_archs, network_params['name'])
-    model = get_model(train_batch_gen_params['input_seq_len'], 
-                      train_batch_gen_params['output_len'],
-                      len(network_params['control_smoothing']) + 1,
-                      filters=network_params['filters'], 
-                      num_tasks=train_gen._num_tasks,
-                      use_attribution_prior=use_attribution_prior,
-                      attribution_prior_params=attribution_prior_params)
+    logging.debug("New {} model".format(model_arch_name))
+    get_model = getattr(archs, model_arch_name)
+    if model_arch_name == "BPNet_ATAC_DNase":
+        model = get_model(
+            tasks, bias_tasks, model_arch_params, bias_model_arch_params, 
+            name_prefix="main")
+    else:        
+        model = get_model(tasks, model_arch_params, name_prefix="main")
     
     # print out the model summary
     model.summary()
 
-#     # if running in multi gpu mode
-#     if parallelization_params['gpus'] > 1:
-#         logging.debug("Multi GPU model")
-#         model = multi_gpu_model(model, gpus=parallelization_params['gpus'])
-
     # compile the model
     logging.debug("Compiling model")
-    logging.info("counts_loss_weight - {}".format(
-        network_params['counts_loss_weight']))
+    logging.info("loss weights - {}".format(model_arch_params['loss_weights']))
     model.compile(Adam(learning_rate=hyper_params['learning_rate']),
                     loss=[MultichannelMultinomialNLL(
-                        train_gen._num_tasks), 'mse'], 
-                    loss_weights=[1, network_params['counts_loss_weight']])
+                        train_gen._total_signal_tracks), 
+                          CustomMeanSquaredError()], 
+                    loss_weights=model_arch_params['loss_weights'])
     
     # begin time for training
     t1 = time.time()
@@ -296,12 +407,14 @@ def train_and_validate(input_params, output_params, genome_params,
     custom_history = {
         'learning_rate': {},
         'loss': {},
+        'batch_loss': {},
         'profile_predictions_loss': {},
-        'logcount_predictions_loss': {},
+        'logcounts_predictions_loss': {},
         'attribution_prior_loss': {},
         'val_loss': {},
+        'val_batch_loss': {},
         'val_profile_predictions_loss': {},
-        'val_logcount_predictions_loss': {},
+        'val_logcounts_predictions_loss': {},
         'val_attribution_prior_loss': {},
         'start_time': {},
         'end_time': {},
@@ -309,8 +422,11 @@ def train_and_validate(input_params, output_params, genome_params,
     }
     
     # we maintain a separate list to track validation losses to make it 
-    # easier for early stopping & learning rate updates
+    # easier for early stopping 
     val_losses = []
+    
+    # track validation losses for learning rate update 
+    val_losses_lr = []
     
     # track best loss so we can restore weights 
     best_loss = 1e6
@@ -332,46 +448,35 @@ def train_and_validate(input_params, output_params, genome_params,
         custom_history['start_time'][str(epoch + 1)] = \
             time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(train_start_time))
         # training generator function that will be passed to fit
-        train_generator = train_gen.gen(epoch)
+        train_generator = train_gen.gen()
         history = model.fit(
             train_generator, epochs=1, steps_per_epoch=train_steps)
         train_end_time = time.time()
         
-        # record the losses
-        custom_history['loss'][str(epoch + 1)] = history.history['loss'][0]
-        custom_history['profile_predictions_loss'][str(epoch + 1)] = \
-            history.history['profile_predictions_loss'][0]
-        custom_history['logcount_predictions_loss'][str(epoch + 1)] = \
-            history.history['logcount_predictions_loss'][0]
-        if use_attribution_prior:
-            custom_history['attribution_prior_loss'][str(epoch + 1)] = \
-                history.history['attribution_prior_loss'][0]
-            
+        # record the training losses
+        for key in history.history:
+            custom_history[key][str(epoch + 1)] = history.history[key][0]
         
         # Then, we evaluate on the validation set
         logging.info("Validation Epoch {}".format(epoch + 1))
         val_start_time = time.time()
         # validation generator function that will be passed to evaluate 
-        val_generator = val_gen.gen(epoch)
+        val_generator = val_gen.gen()
         val_loss = model.evaluate(
             val_generator, steps=val_steps, return_dict=True)
         val_losses.append(val_loss['loss'])
+        val_losses_lr.append(val_loss['loss'])
         val_end_time = time.time()
         custom_history['end_time'][str(epoch + 1)] = \
             time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(val_end_time))
         custom_history['elapsed'][str(epoch + 1)] = \
             val_end_time - train_start_time
         
-        # record the losses
-        custom_history['val_loss'][str(epoch + 1)] = val_loss['loss']
-        custom_history['val_profile_predictions_loss'][str(epoch + 1)] = \
-            val_loss['profile_predictions_loss']
-        custom_history['val_logcount_predictions_loss'][str(epoch + 1)] = \
-            val_loss['logcount_predictions_loss']
-        if use_attribution_prior:
-            custom_history['val_attribution_prior_loss'][str(epoch + 1)] = \
-                val_loss['attribution_prior_loss']
-        
+        # record the validation losses
+        for key in val_loss:
+            custom_history['val_' + key][str(epoch + 1)] = \
+                val_loss[key]
+
         # update best weights and loss 
         if val_loss['loss'] < best_loss:
             best_weights = model.get_weights()
@@ -391,12 +496,17 @@ def train_and_validate(input_params, output_params, genome_params,
             break
 
         # lower learning rate if criteria are satisfied
+        current_lr = model.optimizer.learning_rate.numpy()
         new_lr = reduce_lr_on_plateau(
-            val_losses,
-            model.optimizer.learning_rate.numpy(),
+            val_losses_lr,
+            current_lr,
             factor=hyper_params['lr_reduction_factor'], 
             patience=hyper_params['reduce_lr_on_plateau_patience'],
             min_lr=hyper_params['min_learning_rate'])
+        
+        # reset the validation losses tracker for learning rate update
+        if new_lr != current_lr:
+            val_losses_lr = [val_losses_lr[-1]]
         
         # set the new learning rate
         model.optimizer.learning_rate.assign(new_lr)
@@ -431,6 +541,70 @@ def train_and_validate(input_params, output_params, genome_params,
     # save HDF5 model file
     model.save(model_fname)
     logging.info("Finished saving model: {}".format(model_fname))
+    
+    if adjust_bias_model_logcounts:
+        # all peaks and non peaks
+        loci = train_gen.get_samples()
+        
+        # non-peaks only
+        nonpeaks_loci = loci[loci['weight'] == 0.0]
+        
+        if len(nonpeaks_loci) == 0:
+            logging.info("Non peaks length is 0. Bias model adjustment "
+                         "aborted.")
+        else:
+            # reference file to fetch sequences
+            fasta_ref = pyfaidx.Fasta(genome_params['reference_genome'])
+
+            #get all the bigWigs and peaks from the input_data
+            bigWigs = []
+            for task in tasks:
+                if 'signal' in tasks[task].keys():
+                    bigWigs.extend(tasks[task]['signal']["source"])
+
+            # open each bigwig and add file pointers to a list
+            fbigWigs = []
+            for bigWig in bigWigs:
+                fbigWigs.append(pyBigWig.open(bigWig))
+
+            # get sequences and logcounts
+            logging.info("Fetching non peak sequences and counts ...") 
+            sequences = []
+            logcounts = []
+            for _, row in nonpeaks_loci.iterrows():
+                # chrom, start and end
+                chrom = row['chrom']
+                start = row['pos'] - (batch_gen_params['input_seq_len'] // 2)
+                end = row['pos'] + (batch_gen_params['input_seq_len'] // 2)
+
+                # get the sequences
+                seq = fasta_ref[chrom][start:end].seq.upper()
+
+                # collect all the sequences into a list
+                sequences.append(seq)
+
+                # get the total counts
+                for i in range(len(fbigWigs)):
+                    bw = fbigWigs[i]
+                    logcounts.append(np.log(np.sum(
+                        np.nan_to_num(bw.values(chrom, start, end))) + 1))
+
+            fasta_ref.close()
+
+            # one hot encode the sequences
+            seqs = sequtils.one_hot_encode(
+                sequences, batch_gen_params['input_seq_len'])
+
+            adjusted_model = adjust_bias_logcounts(
+                model, seqs, np.array(logcounts), "logcounts_predictions")
+
+            # saving adjusted model
+            model_fname = model_fname.replace('.h5', '.adjusted.h5')
+
+            # save HDF5 model file
+            adjusted_model.save(model_fname)
+            logging.info(
+                "Finished saving adjusted model: {}".format(model_fname))
 
     # save history to json:  
     # Step 1. convert the custom history dict to a pandas DataFrame:  
@@ -458,13 +632,12 @@ def train_and_validate(input_params, output_params, genome_params,
     
     with open(config_file, 'w') as fp:
         config = {}        
-        config['input_params'] = input_params
+        config['input_data'] = input_data
         config['output_params'] = output_params
         config['genome_params'] = genome_params
         config['batch_gen_params'] = batch_gen_params
         config['hyper_params'] = hyper_params
         config['parallelization_params'] = parallelization_params
-        config['network_params'] = network_params
         
         # the number of epochs the training lasted
         config['training_epochs'] = epoch + 1
@@ -482,15 +655,23 @@ def train_and_validate(input_params, output_params, genome_params,
 
 
 def train_and_validate_ksplits(
-    input_params, output_params, genome_params, batch_gen_params, hyper_params, 
-    parallelization_params, network_params, use_attribution_prior, 
-    attribution_prior_params, splits):
+    input_data, model_arch_name, model_arch_params_json, output_params, 
+    genome_params, batch_gen_params, hyper_params, parallelization_params, 
+    splits, bias_input_data=None, bias_model_arch_params_json=None, 
+    adjust_bias_model_logcounts=False, is_background_model=False, 
+    mnll_loss_sample_weight=1.0, mnll_loss_background_sample_weight=0.0):
 
     """
         Train and validate on one or more train/val splits
         
         Args:
-            input_params (dict): dictionary containing input parameters
+            input_data (str): path to the tasks json file
+            
+            model_arch_name (str): name of the model definition 
+                function in the model_archs module
+                
+            model_arch_params_json (str): path to json file containing
+                model architecture params
             
             output_params (dict): dictionary containing output 
                 parameters
@@ -507,19 +688,24 @@ def train_and_validate_ksplits(
             parallelization_params (dict): dictionary containing
                 parameters for parallelization options
             
-            network_params (dict): dictionary containing parameters
-                specific to the deep learning architecture
-                
-            use_attribution_prior (bool): indicate whether attribution
-                prior loss model should be used
-
-            attribution_prior_params (dict): dictionary containing
-                attribution prior parameters
-            
             splits (str): path to the json file containing train & 
                 validation splits
+            
+            bias_input_data (str): path to the bias tasks json file
+
+            bias_model_arch_params_json (str): path to json file 
+                containing bias model architecture params
+                
+            is_background_model (boolean): True if a background model
+                is to be trained using 'background_loci' samples from
+                the input json
+                
+            mnll_loss_sample_weight (float): weight for each (foreground)
+                training sample for computing mnll loss
+
+            mnll_loss_background_sample_weight (float): weight for each
+                background sample for computing mnll loss
     """
-    
     
     # list of chromosomes after removing the excluded chromosomes
     chroms = set(genome_params['chroms']).difference(
@@ -585,11 +771,13 @@ def train_and_validate_ksplits(
         logging.debug("Split {}: Creating training process".format(i))
         p = mp.Process(
             target=train_and_validate, 
-            args=[input_params, output_params, genome_params, 
-                  batch_gen_params, hyper_params, parallelization_params, 
-                  network_params, use_attribution_prior, 
-                  attribution_prior_params, train_chroms, val_chroms, 
-                  model_dir, split_tag])
+            args=[input_data, model_arch_name, model_arch_params_json,
+                  output_params, genome_params, batch_gen_params, hyper_params,
+                  parallelization_params, train_chroms, val_chroms, model_dir,
+                  bias_input_data, bias_model_arch_params_json, 
+                  adjust_bias_model_logcounts, is_background_model, 
+                  mnll_loss_sample_weight, mnll_loss_background_sample_weight,
+                  split_tag])
         p.start()
         
         # wait for the process to finish

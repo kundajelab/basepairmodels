@@ -13,7 +13,7 @@ Download and install the latest version of Miniconda for your platform. Here is 
 Create a new virtual environment and activate it as shown below
 
 ```
-conda create --name basepairmodels python=3.6.8
+conda create --name basepairmodels python=3.7
 conda activate basepairmodels
 ```
 
@@ -158,22 +158,85 @@ For the sake of this tutorial let's assume we have a `reference` directory at th
 
 ### 2. Train a model!
 
-Before we start training, we need to compile a json file that contains information about the input data. Here is a sample json file that shows how to specify the input data information for the data we organized in Section 1.3. The data is organized into tracks. In this example we have two tracks, the plus and the minus strand. Each track has 4 required keys `strand`, `task_id`, `signal`, & `peaks` and one optional key `control`, which can be specified if control data is available. Notice how the `task_id` remains the same for the two tracks. We use the same `task_id` for the plus & minus pairs of the same experiment, and use `strand` to disinguish between the two, `0` for plus strand and `1` for the minus strand.
+Before we start training, we need to compile a json file that contains information about the input data. Here is a sample json file that shows how to specify the input data information for the data we organized in Section 1.3. The data is organized into tasks and tracks. In this example we have one task and two tracks, the plus and the minus strand. Each track has 4 required keys `signal`, `loci`, `background_loci`, & `bias`. 
 
 
 ```
 {
-    "task0_plus": {"strand": 0, 
-                  "task_id": 0, 
-                  "signal": "/users/john/ENCSR000EGM/data/plus.bw", 
-                  "control": "/users/john/ENCSR000EGM/data/control_plus.bw", 
-                  "peaks": "/users/john/ENCSR000EGM/data/peaks.bed"},
-    "task0_minus": {"strand": 1, 
-                   "task_id": 0, 
-                   "signal": "/users/john/ENCSR000EGM/data/minus.bw", 
-                   "control": "/users/john/ENCSR000EGM/data/control_minus.bw",
-                   "peaks": "/users/john/ENCSR000EGM/data/peaks.bed"} 
+    "0": {
+        "signal": {
+            "source": ["/users/john/ENCSR000EGM/data/plus.bw", 
+                       "/users/john/ENCSR000EGM/data/minus.bw"]
+        },
+        "loci": {
+            "source": ["/users/john/ENCSR000EGM/data/peaks.bed"]
+        },
+        "background_loci": {
+            "source": [],
+            "ratio": []
+        },
+        "bias": {
+            "source": ["/users/john/ENCSR000EGM/data/control_plus.bw",
+                       "/users/john/ENCSR000EGM/data/control_minus.bw"],
+            "smoothing": [null, null]
+        }
+    }
 }
+```
+
+We'll call the above json file `input_data.json`. Additionally we need a json
+file to specify parameters for the BPNet architecture. Let's call this json file
+`bpnet_params.json` 
+
+```
+{
+    "input_len": 2114,
+    "output_profile_len": 1000,
+    "motif_module_params": {
+        "filters": [64],
+        "kernel_sizes": [21],
+        "padding": "valid"
+    },
+    "syntax_module_params": {
+        "num_dilation_layers": 8,
+        "filters": 64,
+        "kernel_size": 3,
+        "padding": "valid",
+        "pre_activation_residual_unit": true
+    },
+    "profile_head_params": {
+        "filters": 1,
+        "kernel_size":  75,
+        "padding": "valid"
+    },
+    "counts_head_params": {
+        "units": [1],
+        "dropouts": [0.0],
+        "activations": ["linear"]
+    },
+    "profile_bias_module_params": {
+        "kernel_sizes": [1]
+    },
+    "counts_bias_module_params": {
+    },
+    "use_attribution_prior": false,
+    "attribution_prior_params": {
+        "frequency_limit": 150,
+        "limit_softness": 0.2,
+        "grad_smooth_sigma": 3,
+        "profile_grad_loss_weight": 200,
+        "counts_grad_loss_weight": 100        
+    },
+    "loss_weights": [1, 42]
+}
+```
+
+The `loss_weights` field has two values the `profile` loss weight and the 
+`counts` loss weight. The counts loss weight can be automatically generated 
+using the following command
+
+```
+counts_loss_weight --input-data $INPUT_DATA
 ```
 
 Now that we have our data prepped, we can train our first model!!
@@ -183,34 +246,34 @@ The command to train a model is called `train`.
 You can kick start the training process by executing this command in your shell
 
 ```
-BASE_DIR=~/ENCSR000EGM
+BASE_DIR=/users/john/ENCSR000EGM
 DATA_DIR=$BASE_DIR/data
 MODEL_DIR=$BASE_DIR/models
-REFERENCE_DIR=~/reference
+REFERENCE_DIR=$BASE_DIR/reference
 CHROM_SIZES=$REFERENCE_DIR/hg38.chrom.sizes
 REFERENCE_GENOME=$REFERENCE_DIR/hg38.genome.fa
 CV_SPLITS=$BASE_DIR/splits.json
 INPUT_DATA=$BASE_DIR/input_data.json
+MODEL_PARAMS=$BASE_DIR/bpnet_params.json
+
 
 mkdir $MODEL_DIR
 train \
     --input-data $INPUT_DATA \
-    --stranded \
-    --has-control \
     --output-dir $MODEL_DIR \
     --reference-genome $REFERENCE_GENOME \
     --chroms $(paste -s -d ' ' $REFERENCE_DIR/hg38_chroms.txt) \
     --chrom-sizes $CHROM_SIZES \
     --splits $CV_SPLITS \
-    --model-arch-name BPNet1000d8 \
+    --model-arch-name BPNet \
+    --model-arch-params-json $MODEL_PARAMS \
     --sequence-generator-name BPNet \
     --model-output-filename model \
     --input-seq-len 2114 \
     --output-len 1000 \
-    --filters 64 \
     --shuffle \
     --threads 10 \
-    --epochs 100 \
+    --epochs 3 \
     --learning-rate 0.004
 ```
 
@@ -225,94 +288,95 @@ The `splits.json` file contains information about the chromosomes that are used 
 }
 ```
 
-Note: It might take a few minutes for the training to begin once the above command has been issued, be patient and you should see the training eventually start. For this experiment the training should complete in about an hour or atmost 2 hours depending on the GPU you are using. 
+Note: It might take a few minutes for the training to begin once the above command has been issued, be patient and you should see the training eventually start. 
 
 ### 3. Predict on test set
 
-Once the training is complete we can generate prediction on the test chromosome.
+Once the training is complete we can generate predictions on the test chromosome.
 
 ```
-PREDICTIONS_DIR=$BASE_DIR/predictions
+PREDICTIONS_DIR=$BASE_DIR/predictions_and_metrics
 mkdir $PREDICTIONS_DIR
-predict \
-    --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
-    --chrom-sizes $CHROM_SIZES \
+fastpredict \
+    --model $MODEL_DIR/model_split000.h5 \
+    --chrom-sizes $REFERENCE_DIR/GRCh38_EBV.chrom.sizes \
     --chroms chr1 \
-    --reference-genome $REFERENCE_GENOME \
-    --exponentiate-counts \
+    --reference-genome $REFERENCE_DIR/hg38.genome.fa \
     --output-dir $PREDICTIONS_DIR \
-    --input-data $INPUT_DATA \
-    --predict-peaks \
-    --write-buffer-size 2000 \
-    --batch-size 1 \
-    --has-control \
-    --stranded \    
+    --input-data $BASE_DIR/input.json \
+    --sequence-generator-name BPNet \
     --input-seq-len 2114 \
     --output-len 1000 \
-    --output-window-size 1000
+    --output-window-size 1000 \
+    --batch-size 64 \
+    --threads 2 \
+    --generate-predicted-profile-bigWigs
 ```
 
-### 4. Compute metrics
+This script with output test metrics and also output bigwig tracks if the 
+`--generate-predicted-profile-bigWigs` is specified
 
-To compute metrics first compute the min max bounds for each peak individually, and on both the plus and minus strands. This can be done by a single command as follows:
-
-```
-BOUNDS_DIR=$BASE_DIR/bounds
-mkdir $METRICS_DIR
-bounds \
-    --input-profiles $DATA_DIR/plus.bw $DATA_DIR/minus.bw \
-    --output-names task0_plus task0_minus \
-    --output-directory $BOUNDS_DIR \
-    --peaks $DATA_DIR/peaks.bed \
-    --chroms chr1
-```
-
-Now compute metrics on the `plus` and `minus` strand separately using the following command
-
-```
-METRICS_DIR=$BASE_DIR/metrics
-mkdir $METRICS_DIR
-metrics \
-   -A [path to profile training bigwig] \
-   -B [path to profile predictions bigwig] \
-   --peaks $DATA_DIR/peaks.bed \
-   --chroms chr1 \
-   --output-dir $METRICS_DIR \
-   --apply-softmax-to-profileB \
-   --countsB [path to exponentiated counts predictions bigWig] \
-   --chrom-sizes $CHROM_SIZES
-```
-
-### 5. Compute importance scores
+### 4. Compute importance scores
 
 ```
 SHAP_DIR=$BASE_DIR/shap
 mkdir $SHAP_DIR
 shap_scores \
     --reference-genome $REFERENCE_GENOME \
-    --model $(ls ${MODEL_DIR}/***INSERT-DIRECTORY-NAME-HERE***/*.h5) \
-    --bed-file $DATA_DIR/peaks.bed \
+    --model $MODEL_DIR/model_split000.h5  \
+    --bed-file $DATA_DIR/peaks_med.bed \
     --chroms chr1 \
     --output-dir $SHAP_DIR \
     --input-seq-len 2114 \
     --control-len 1000 \
-    --control-smoothing 7.0 81 \
     --task-id 0 \
-    --control-info $INPUT_DATA
+    --input-data $BASE_DIR/input.json 
 ```
 
-### 6. Discover motifs with TF-modisco
+### 5. Discover motifs with TF-modisco
 
 ```
 MODISCO_PROFILE_DIR=$BASE_DIR/modisco_profile
 mkdir $MODISCO_PROFILE_DIR
 motif_discovery \
-    ---scores-path $INTERPRET_DIR/<path to profile scores file> \
+    --scores-path $SHAP_DIR/profile_scores.h5 \
     --output-directory $MODISCO_PROFILE_DIR
 
 MODISCO_COUNTS_DIR=$BASE_DIR/modisco_counts
 mkdir $MODISCO_COUNTS_DIR
-motif_discovery \ 
-    ---scores-path $INTERPRET_DIR/<path to counts scores file> \
+motif_discovery \
+    --scores-path $SHAP_DIR/counts_scores.h5 \
     --output-directory $MODISCO_COUNTS_DIR
+```
+
+### 6. Filter the peaks file for outliers
+
+```
+outliers \
+    --input-data $INPUT_DATA  \
+    --quantile 0.99 \
+    --quantile-value-scale-factor 1.2 \
+    --task 0 \
+    --chrom-sizes $REFERENCE_DIR/hg38.chrom.sizes \
+    --chroms $(paste -s -d ' ' $REFERENCE_DIR/hg38_chroms.txt) \
+    --sequence-len 1000 \
+    --blacklist $BASE_DIR/blacklist.bed \
+    --global-sample-weight 1.0 \
+    --output-bed /users/zahoor/cli-tutorial/inliers.bed
+```
+
+### 7. Compute embeddings from intermediate layers
+
+```
+EMBEDDINGS_DIR=$BASE_DIR/embeddings
+mkdir $EMBEDDINGS_DIR
+embeddings \
+    --model $MODEL_DIR/model_split000.h5 \
+    --reference-genome $REFERENCE_GENOME \
+    --embeddings-layer-name main_profile_head \
+    --cropped-size 1000 \
+    --input-layer-shape 2114 4 \
+    --peaks $DATA_DIR/peaks_med.bed \
+    --output-directory $EMBEDDINGS_DIR \
+    --batch-size 256
 ```

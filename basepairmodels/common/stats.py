@@ -33,7 +33,7 @@ def get_recommended_counts_loss_weight(input_bigWigs, peaks,
                 signal. n_obs will computed as a global average
                 across all the input bigWigs
             
-            peaks (list): list 3 column pandas dataframes,
+            peaks (pandas.DataFrame): 3 column pandas dataframes,
                  with 'chrom', 'start' and 'end' columns,
                  corresponding to each input bigWig
 
@@ -46,11 +46,6 @@ def get_recommended_counts_loss_weight(input_bigWigs, peaks,
             
     """
 
-    # check if 'input_bigwigs' and 'peaks' have the same length
-    if len(input_bigWigs) != len(peaks):
-        raise NoTracebackException("There should be same number of peaks "
-                             "dataframes as input bigWigs") 
-    
     # check to make sure all bigwigs are valid files
     for bigWig in input_bigWigs:
         if not os.path.exists(bigWig):
@@ -70,22 +65,25 @@ def get_recommended_counts_loss_weight(input_bigWigs, peaks,
         bw = bigWigs[i]
         
         # iterate over all the corresponding peaks
-        for _idx, row in peaks[i].iterrows():
+        for _idx, row in peaks.iterrows():
             # chrom window
             chrom = row['chrom']
             start = row['start']
             end = row['end']
-            total_counts += np.sum(
-                np.nan_to_num(bw.values(chrom, start, end)))
-        
-        total_peaks += peaks[i].shape[0]
-        
+            try:
+                total_counts += np.sum(
+                    np.nan_to_num(bw.values(chrom, start, end)))
+                total_peaks += 1
+            except RuntimeError as e:
+                # we ignore the chrom coordinates that give 
+                # Interval out of bounds error
+                continue
+                
     # average of the total counts
     n_obs = total_counts / float(total_peaks)
     
     return (alpha / 2.0) * n_obs
 
-            
             
         
         

@@ -72,10 +72,10 @@ def counts_loss_weight_main():
     peaks = []
     for task in input_data:
         if 'signal' in input_data[task].keys():
-            bigWigs.append(input_data[task]['signal'])
+            bigWigs.extend(input_data[task]['signal']["source"])
 
-        if 'peaks' in input_data[task].keys():
-            peaks.append(input_data[task]['peaks'])
+        if 'loci' in input_data[task].keys():
+            peaks.extend(input_data[task]['loci']['source'])
             
     # if no bigWigs found
     if len(bigWigs) == 0:
@@ -89,18 +89,12 @@ def counts_loss_weight_main():
         # check to see if all are valid paths
         for bigWig in bigWigs:
             if not os.path.exists(bigWig):
-                # output the default value to stdout
-                print(args.default)
-
                 raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(bigWig, args.default))
         
     # if no peaks found
     if len(peaks) == 0:
-        # output the default value to stdout
-        print(args.default)
-
         raise NoTracebackException(
             "No 'peaks' files found. Using default weight {}".format(
                 args.default))
@@ -108,9 +102,6 @@ def counts_loss_weight_main():
         # check to see if all are valid paths
         for peak_file in peaks:
             if not os.path.exists(peak_file):
-                # output the default value to stdout
-                print(args.default)
-
                 raise NoTracebackException(
                     "File {} does not exist. Using default weight "
                     "{}".format(peak_file, args.default))
@@ -138,9 +129,11 @@ def counts_loss_weight_main():
         # append to the list of peaks dataframes
         peaks_dfs.append(peaks_df[['chrom', 'start', 'end']])
 
+    peaks_df = pd.concat(peaks_dfs)
+    
     # compute the counts loss weight using the stats module function
     clw = stats.get_recommended_counts_loss_weight(
-        bigWigs, peaks_dfs, args.alpha)
+        bigWigs, peaks_df, args.alpha)
     
     print(clw)
 
