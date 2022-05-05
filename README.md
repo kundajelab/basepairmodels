@@ -229,6 +229,14 @@ file to specify parameters for the BPNet architecture. Let's call this json file
 }
 ```
 
+The `loss_weights` field has two values the `profile` loss weight and the 
+`counts` loss weight. The counts loss weight can be automatically generated 
+using the following command
+
+```
+counts_loss_weight --input-data $INPUT_DATA
+```
+
 Now that we have our data prepped, we can train our first model!!
 
 The command to train a model is called `train`. 
@@ -282,7 +290,7 @@ Note: It might take a few minutes for the training to begin once the above comma
 
 ### 3. Predict on test set
 
-Once the training is complete we can generate prediction on the test chromosome.
+Once the training is complete we can generate predictions on the test chromosome.
 
 ```
 PREDICTIONS_DIR=$BASE_DIR/predictions_and_metrics
@@ -302,6 +310,9 @@ fastpredict \
     --threads 2 \
     --generate-predicted-profile-bigWigs
 ```
+
+This script with output test metrics and also output bigwig tracks if the 
+`--generate-predicted-profile-bigWigs` is specified
 
 ### 4. Compute importance scores
 
@@ -334,4 +345,36 @@ mkdir $MODISCO_COUNTS_DIR
 motif_discovery \
     --scores-path $SHAP_DIR/counts_scores.h5 \
     --output-directory $MODISCO_COUNTS_DIR
+```
+
+### 6. Filter the peaks file for outliers
+
+```
+outliers \
+    --input-data $INPUT_DATA  \
+    --quantile 0.99 \
+    --quantile-value-scale-factor 1.2 \
+    --task 0 \
+    --chrom-sizes $REFERENCE_DIR/hg38.chrom.sizes \
+    --chroms $(paste -s -d ' ' $REFERENCE_DIR/hg38_chroms.txt) \
+    --sequence-len 1000 \
+    --blacklist $BASE_DIR/blacklist.bed \
+    --global-sample-weight 1.0 \
+    --output-bed /users/zahoor/cli-tutorial/inliers.bed
+```
+
+### 7. Compute embeddings from intermediate layers
+
+```
+EMBEDDINGS_DIR=$BASE_DIR/embeddings
+mkdir $EMBEDDINGS_DIR
+embeddings \
+    --model $MODEL_DIR/model_split000.h5 \
+    --reference-genome $REFERENCE_GENOME \
+    --embeddings-layer-name main_profile_head \
+    --cropped-size 1000 \
+    --input-layer-shape 2114 4 \
+    --peaks $DATA_DIR/peaks_med.bed \
+    --output-directory $EMBEDDINGS_DIR \
+    --batch-size 256
 ```
