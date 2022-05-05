@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="basepairmodels",
-    version='0.2.1',
+    version='0.3.0',
     description=("BPNet: toolkit to learn motif synthax from high-resolution functional genomics data"
                  " using convolutional neural networks"),
     author="Zahoor Zafrulla",
