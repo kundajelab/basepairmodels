@@ -56,12 +56,12 @@ from genomicsdlarchsandlosses.bpnet.losses import \
 MultichannelMultinomialNLL, multinomial_nll, CustomMeanSquaredError
 from mseqgen.sequtils import one_hot_encode
 
-from keras.models import Model, load_model
-from keras.utils import CustomObjectScope
-from keras.layers import Flatten, Cropping1D, Lambda, Reshape
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.utils import CustomObjectScope
+from tensorflow.keras.layers import Flatten, Cropping1D, Lambda, Reshape
 from tqdm import tqdm 
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 import h5py
 import numpy as np
 import os
