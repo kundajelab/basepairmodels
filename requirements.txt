@@ -6,7 +6,7 @@ scipy
 scikit-image
 deepdish
 h5py
-numpy==1.16.4
+numpy==1.21.0
 pandas
 matplotlib
 plotly
