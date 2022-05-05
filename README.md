@@ -293,7 +293,7 @@ Once the training is complete we can generate predictions on the test chromosome
 ```
 PREDICTIONS_DIR=$BASE_DIR/predictions_and_metrics
 mkdir $PREDICTIONS_DIR
-fastpredict \
+predict \
     --model $MODEL_DIR/model_split000.h5 \
     --chrom-sizes $REFERENCE_DIR/GRCh38_EBV.chrom.sizes \
     --chroms chr1 \

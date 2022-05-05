@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="basepairmodels",
-    version='0.3.0',
+    version='0.3.1',
     description=("BPNet: toolkit to learn motif synthax from high-resolution functional genomics data"
                  " using convolutional neural networks"),
     author="Zahoor Zafrulla",
@@ -34,7 +34,7 @@ setup(
     entry_points = {
         "console_scripts": [
             "train = basepairmodels.cli.bpnettrainer:main",
-            "fastpredict = basepairmodels.cli.fastpredict:predict_main",
+            "predict = basepairmodels.cli.predict:predict_main",
             "shap_scores = basepairmodels.cli.shap_scores:shap_scores_main",
             "motif_discovery = basepairmodels.cli.motif_discovery:motif_discovery_main",
             "counts_loss_weight = basepairmodels.cli.counts_loss_weight:counts_loss_weight_main",
