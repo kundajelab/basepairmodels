@@ -358,7 +358,7 @@ outliers \
     --sequence-len 1000 \
     --blacklist $BASE_DIR/blacklist.bed \
     --global-sample-weight 1.0 \
-    --output-bed /users/zahoor/cli-tutorial/inliers.bed
+    --output-bed $DATA_DIR/inliers.bed
 ```
 
 ### 7. Compute embeddings from intermediate layers
