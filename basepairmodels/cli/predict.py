@@ -471,8 +471,20 @@ def predict(args, pred_dir):
         dtype=float, compression="gzip")
     
     # numpy array to hold all predictions
-    all_predictions = np.zeros(
+    all_pred_profiles = np.zeros(
         (num_examples, args.output_window_size, num_output_tracks))
+
+    # numpy array to hold all logcounts predictions
+    all_pred_logcounts = np.zeros(
+        (num_examples, num_output_tracks))
+
+    # numpy array to hold all true profiles
+    all_true_profiles = np.zeros(
+        (num_examples, args.output_window_size, num_output_tracks))
+
+    # numpy array to hold all true logcounts
+    all_true_logcounts = np.zeros(
+        (num_examples, num_output_tracks))
     
     # begin time for predictions
     t1 = time.time()
@@ -589,26 +601,36 @@ def predict(args, pred_dir):
         # in the hdf5 datsets
         start_idx = cnt_examples
         end_idx = cnt_examples + cnt_batch_examples
-        pred_profs_dset[start_idx:end_idx, :, :] = \
+
+        # populate all_pred_profiles 
+        all_pred_profiles[start_idx:end_idx, :, :] = \
             pred_profiles[:cnt_batch_examples]
-        pred_logcounts_dset[start_idx:end_idx, :] = \
+        
+        # populate all_pred_logcounts
+        all_pred_logcounts[start_idx:end_idx, :] = \
             pred_logcounts[:cnt_batch_examples]
-        true_profs_dset[start_idx:end_idx, :, :] = \
+        
+        # populate all_true_profiles
+        all_true_profiles[start_idx:end_idx, :, :] = \
             _true_profiles[:cnt_batch_examples]
-        true_logcounts_dset[start_idx:end_idx, :] = \
-            _true_logcounts[:cnt_batch_examples]
-
-        coords_chrom_dset[start_idx:end_idx] = all_chroms[start_idx:end_idx]
-        coords_start_dset[start_idx:end_idx] = all_starts[start_idx:end_idx]
-        coords_end_dset[start_idx:end_idx] = all_ends[start_idx:end_idx]
-
-        # populate the all_predictions 
-        all_predictions[start_idx:end_idx, :, :] = \
-            pred_profiles[:cnt_batch_examples]
+        
+        # populate all_true_logcounts
+        all_true_logcounts[start_idx:end_idx, :] = \
+            _true_logcounts[:cnt_batch_examples]        
         
         # increment the total examples counter
         cnt_examples += cnt_batch_examples
 
+    # write to HDF5 all at once
+    pred_profs_dset[:, :, :] = all_pred_profiles
+    pred_logcounts_dset[:, :] = all_pred_logcounts
+    true_profs_dset[:, :, :] = all_true_profiles
+    true_logcounts_dset[:, :] = all_true_logcounts
+
+    coords_chrom_dset[:] = all_chroms
+    coords_start_dset[:] = all_starts
+    coords_end_dset[:] = all_ends
+        
     # close hdf5 file
     h5_file.close()
 
@@ -620,7 +642,7 @@ def predict(args, pred_dir):
         
         logging.info('Generating predicted profile bigWigs ...')
 
-        logging.info("predictions shape - {}".format(all_predictions.shape))
+        logging.info("predictions shape - {}".format(all_pred_profiles.shape))
         
         # read the chrom sizes file into a pandas dataframe
         chrom_sizes_df = pd.read_csv(
@@ -647,14 +669,14 @@ def predict(args, pred_dir):
         # mid points
         all_mids = list((np.array(all_starts) + np.array(all_ends)) // 2)
 
-        for i in range(all_predictions.shape[-1]):
+        for i in range(all_pred_profiles.shape[-1]):
             outfile_name = '{}/{}_predictions_track_{}.bw'.format(
                 args.output_dir, model_tag, i)
             outstatsfile_name = '{}/{}_predictions_track_{}_stats.txt'.format(
                 args.output_dir, model_tag, i)
     
             write_bigwig(
-                all_predictions[:, :, i], 
+                all_pred_profiles[:, :, i], 
                 list(zip(all_chroms, all_starts, all_ends, all_mids)),
                 header, outfile_name, outstatsfile_name)
 
