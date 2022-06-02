@@ -265,11 +265,6 @@ def shap_scores_argsparser():
                         help="the path to the bed file containing "
                         "postions at which the model should be interpreted")
 
-    parser.add_argument('--sample', '-s', type=int,
-                        help="the number of samples to randomly sample from "
-                        "the bed file. Only one of --sample or --chroms can "
-                        "be used.")
-
     parser.add_argument('--chroms', '-c', nargs='+',
                         help="list of chroms on which the contribution scores "
                         "are to be computed. If not specified all chroms in "
@@ -286,10 +281,6 @@ def shap_scores_argsparser():
                         "control bigWigs. The --task-id is matched with "
                         "'task_id' in the the json file to get the list of "
                         "control bigWigs")
-
-    parser.add_argument('--control-smoothing', nargs='+',
-                        help="sigma and window width for gaussian 1d "
-                        "smoothing of the control", default=[7.0, 81])
     
     parser.add_argument('--num-shuffles', type=int,
                         help="the number of dinucleotide shuffles to perform "

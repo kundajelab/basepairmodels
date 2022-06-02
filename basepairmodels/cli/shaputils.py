@@ -42,7 +42,8 @@ def combine_mult_and_diffref(mult, orig_inp, bg_data):
             
         to_return.append(np.mean(projected_hypothetical_contribs,axis=0))
         
-    to_return.append(np.zeros_like(orig_inp[1]))
+    if len(orig_inp) == 2:
+        to_return.append(np.zeros_like(orig_inp[1]))
     
     return to_return
 

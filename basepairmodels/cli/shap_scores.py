@@ -98,13 +98,7 @@ def shap_scores(args, shap_dir):
         # keep only those rows corresponding to the required 
         # chromosomes
         peaks_df = peaks_df[peaks_df['chrom'].isin(args.chroms)]
-           
-    if args.sample is not None:
-        # randomly sample rows
-        logging.info("Sampling {} rows from {}".format(
-            args.sample, args.bed_file))
-        peaks_df = peaks_df.sample(n=args.sample, random_state=args.seed)
-    
+
     if args.presort_bed_file:
         # sort the bed file in descending order of peak strength
         peaks_df = peaks_df.sort_values(['signalValue'], ascending=False)
@@ -169,20 +163,26 @@ def shap_scores(args, shap_dir):
             for smoothing_val in _smoothing:
                 if smoothing_val is not None:
                     smoothing.append(smoothing_val)
-                    
-            
-    # log of sum of counts of the control track
-    # if multiple control files are specified this would be
-    # log(sum(position_wise_sum_from_all_files))
-    bias_counts_input = np.zeros((num_peaks, 
-                                  len(control_bigWigs) + len(smoothing)))
+           
+    # if bias is part of the model and no bias was specified in the 
+    # input json
+    if isinstance(model.input, list) and len(control_bigWigs) == 0:
+        raise NoTracebackException(
+            "Model requires bias inputs but none specified")
+        
+    bias_counts_input = None
+    bias_profile_input = None
+    # if bias is part of the model then model inputs will be a list
+    if isinstance(model.input, list):
+        # log of sum of counts of the control track
+        # if multiple control files are specified this would be
+        # log(sum(position_wise_sum_from_all_files))
+        bias_counts_input = np.zeros((num_peaks, 
+                                      len(control_bigWigs) + len(smoothing)))
 
-    # the control profile and the smoothed version of the control 
-    bias_profile_input = np.zeros((num_peaks, args.control_len, 
-                                   len(control_bigWigs) + len(smoothing)))
-    
-    ## IF NO CONTROL BIGWIGS ARE SPECIFIED THEN THE TWO NUMPY ARRAYS
-    ## bias_counts_input AND bias_profile_input WILL REMAIN ZEROS
+        # the control profile and the smoothed version of the control 
+        bias_profile_input = np.zeros((num_peaks, args.control_len, 
+                                       len(control_bigWigs) + len(smoothing)))
     
     # list to hold all the sequences for the peaks
     sequences = []
@@ -214,7 +214,7 @@ def shap_scores(args, shap_dir):
             seq = 'N'*args.input_seq_len     
         
         # fetch control values
-        if len(control_bigWigs) > 0:
+        if bias_counts_input is not None and bias_profile_input is not None:
             # a different start and end for controls since control_len
             # is usually not the same as input_seq_len
             start = row['st'] + row['summit'] - (args.control_len // 2)
@@ -222,8 +222,13 @@ def shap_scores(args, shap_dir):
 
             # read the values from the control bigWigs
             for i in range(len(control_bigWigs)):
-                vals = np.nan_to_num(
-                    control_bigWigs[i].values(row['chrom'], start, end))
+                try:
+                    vals = np.nan_to_num(
+                        control_bigWigs[i].values(row['chrom'], start, end))
+                except RuntimeError:
+                    print("Invalid interval bounds", row['chrom'], start, end)
+                    continue
+                    
                 bias_counts_input[idx, i] = np.log(np.sum(vals) + 1)
                 bias_profile_input[idx, :, i] = vals
             
@@ -275,8 +280,21 @@ def shap_scores(args, shap_dir):
         return dinucs
     
     # shap explainer for the counts head
+    if bias_counts_input is None and bias_profile_input is None:
+        counts_explainer_inputs = [model.input]
+        profile_explainer_inputs =[model.input]
+        
+        counts_shap_inputs = [X]
+        profile_shap_inputs = [X]
+    else:
+        counts_explainer_inputs = [model.input[0], model.input[2]]
+        profile_explainer_inputs = [model.input[0], model.input[1]]
+        
+        counts_shap_inputs = [X, bias_counts_input]
+        profile_shap_inputs = [X, bias_profile_input]
+
     profile_model_counts_explainer = shap.explainers.deep.TFDeepExplainer(
-        ([model.input[0], model.input[2]], 
+        (counts_explainer_inputs, 
          tf.reduce_sum(model.outputs[1], axis=-1)),
         data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
@@ -285,13 +303,13 @@ def shap_scores(args, shap_dir):
     weightedsum_meannormed_logits = get_weightedsum_meannormed_logits(
         model, task_id=args.task_id, stranded=True)
     profile_model_profile_explainer = shap.explainers.deep.TFDeepExplainer(
-        ([model.input[0], model.input[1]], weightedsum_meannormed_logits),
+        (profile_explainer_inputs, weightedsum_meannormed_logits),
         data_func, 
         combine_mult_and_diffref=combine_mult_and_diffref)
 
     logging.info("Generating 'counts' shap scores")
     counts_shap_scores = profile_model_counts_explainer.shap_values(
-        [X, bias_counts_input], progress_message=100)
+        counts_shap_inputs, progress_message=100)
     
     # save the dictionary in HDF5 formnat
     logging.info("Saving 'counts' scores")
@@ -303,7 +321,7 @@ def shap_scores(args, shap_dir):
     
     logging.info("Generating 'profile' shap scores")
     profile_shap_scores = profile_model_profile_explainer.shap_values(
-        [X, bias_profile_input], progress_message=100)
+        profile_shap_inputs, progress_message=100)
     
     # save the dictionary in HDF5 formnat
     logging.info("Saving 'profile' scores")
@@ -356,19 +374,7 @@ def shap_scores_main():
     if not os.path.exists(args.bed_file):
         raise NoTracebackException(
             "File {} does not exist".format(args.bed_file))
-    
-    # if controls are specified check if the control_info json exists
-    if args.input_data is not None:
-        if not os.path.exists(args.input_data):
-            raise NoTracebackException(
-                "Input data file {} does not exist".format(args.control_info))
-            
-    # check if both args.chroms and args.sample are specified, only
-    # one of the two is allowed
-    if args.chroms is not None and args.sample is not None:
-        raise NoTracebackException(
-            "Only one of [--chroms, --sample]  is allowed")
-            
+
     if args.automate_filenames:
         # create a new directory using current date/time to store the
         # shapation scores
