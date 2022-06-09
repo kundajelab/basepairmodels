@@ -68,19 +68,16 @@ def training_argsparser():
     # reference params
     parser.add_argument('--reference-genome', '-g', type=str, required=True,
                         help="number of gpus to use", default=1)
-    
-    parser.add_argument('--chrom-sizes', '-c', type=str, required=True,
-                        help="path to chromosome sizes file")
-    
-    parser.add_argument('--chroms', nargs='+', required=True,
-                        help="master list of chromosomes for the genome")
-    
-    parser.add_argument('--exclude-chroms', nargs='+', help="list of "
-                        "chromosomes to be excluded", default=[])    
 
     # validation params
+    parser.add_argument('--chrom-sizes', '-c', type=str,
+                        help="path to chromosome sizes file")
+    
+    parser.add_argument('--chroms', nargs='+',
+                        help="master list of chromosomes for the genome")
+
     parser.add_argument('--splits', '-s', type=str,
-                        help="path to json file")
+                        help="path to json file") 
 
     # output params    
     parser.add_argument('--output-dir', '-d', type=str,
