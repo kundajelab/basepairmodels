@@ -64,7 +64,6 @@ def main():
     genome_params['reference_genome'] = args.reference_genome
     genome_params['chrom_sizes'] = args.chrom_sizes
     genome_params['chroms'] = args.chroms
-    genome_params['exclude_chroms'] = args.exclude_chroms
 
     # batch generation parameters
     batch_gen_params = {}    
