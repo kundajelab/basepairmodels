@@ -174,10 +174,11 @@ def adjust_bias_logcounts(bias_model, seqs, cts, logcounts_layer_name):
 def train_and_validate(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
-    train_chroms, val_chroms, model_dir, bias_input_data=None, 
-    bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
-    is_background_model=False, mnll_loss_sample_weight=1.0, 
-    mnll_loss_background_sample_weight=0.0, suffix_tag=None):
+    model_dir, train_chroms=None, val_chroms=None, train_indices=None, 
+    val_indices=None, bias_input_data=None, bias_model_arch_params_json=None, 
+    adjust_bias_model_logcounts=False, is_background_model=False,
+    mnll_loss_sample_weight=1.0, mnll_loss_background_sample_weight=0.0, 
+    suffix_tag=None):
 
     """
         Train and validate on a single train and validation set
@@ -346,7 +347,7 @@ def train_and_validate(
     train_gen = BatchGenerator(input_data, train_batch_gen_params, 
                                genome_params['reference_genome'], 
                                genome_params['chrom_sizes'],
-                               train_chroms, 
+                               train_chroms, train_indices,
                                num_threads=parallelization_params['threads'], 
                                batch_size=hyper_params['batch_size'], 
                                background_only=is_background_model,
@@ -358,7 +359,7 @@ def train_and_validate(
     val_gen = BatchGenerator(input_data, val_batch_gen_params, 
                              genome_params['reference_genome'], 
                              genome_params['chrom_sizes'],
-                             val_chroms, 
+                             val_chroms, val_indices,
                              num_threads=parallelization_params['threads'], 
                              batch_size=hyper_params['batch_size'], 
                              background_only=is_background_model,
@@ -706,18 +707,15 @@ def train_and_validate_ksplits(
             mnll_loss_background_sample_weight (float): weight for each
                 background sample for computing mnll loss
     """
-    
-    # list of chromosomes after removing the excluded chromosomes
-    chroms = set(genome_params['chroms']).difference(
-        set(genome_params['exclude_chroms']))
-        
+
     # list of models from all of the splits
     models = []
     
     # run training for each validation/test split
     num_splits = len(list(splits.keys()))
     for i in range(num_splits):
-        
+        logging.info("Split #{}".format(i))
+
         if output_params['automate_filenames']:
             # create a new directory using current date/time to store the
             # model, the loss history and logs 
@@ -740,28 +738,58 @@ def train_and_validate_ksplits(
         logger.init_logger(logfname)
     
         # train & validation chromosome split
-        if 'val' not in splits[str(i)]:
-            logging.error("KeyError: 'val' required for split {}".format(i))
-            return
-        val_chroms = splits[str(i)]['val']
-        # if 'train' key is present
-        if 'train' in splits[str(i)]:
-            train_chroms = splits[str(i)]['train']
-        # if 'test' key is present but train is not
-        elif 'test' in splits[str(i)]:
-            test_chroms = splits[str(i)]['test']
-            # take the set difference of the whole list of
-            # chroms with the union of val and test
-            train_chroms = list(chroms.difference(
-                set(val_chroms + test_chroms)))
-        else:
-            # take the set difference of the whole list of
-            # chroms with val
-            train_chroms = list(chroms.difference(val_chroms))
         
-        logging.info("Split #{}".format(i))
-        logging.info("Train: {}".format(train_chroms))
-        logging.info("Val: {}".format(val_chroms))
+        # we'll make val or val_indices_file the starting point
+        train_chroms = None
+        val_chroms = None
+        train_indices = None
+        val_indices = None
+        if 'val' in splits[str(i)]:
+            val_chroms = splits[str(i)]['val']
+            if 'train' in splits[str(i)]:
+                train_chroms = splits[str(i)]['train']
+            # if 'test' key is present but train is not
+            elif 'test' in splits[str(i)]:
+                test_chroms = splits[str(i)]['test']
+                # take the set difference of the whole list of
+                # chroms with the union of val and test
+                train_chroms = list(chroms.difference(
+                    set(val_chroms + test_chroms)))
+            else:
+                # take the set difference of the whole list of
+                # chroms with val
+                train_chroms = list(chroms.difference(val_chroms))
+                
+            logging.info("Train chroms: {}".format(train_chroms))
+            logging.info("Val chroms: {}".format(val_chroms))
+        elif 'val_indices_file' in splits[str(i)]:
+            val_indices_file = splits[str(i)]['val_indices_file']
+            train_indices_file = splits[str(i)]['train_indices_file']
+            
+            # make sure the val_indices_file file exists
+            if not os.path.isfile(val_indices_file):
+                raise NoTracebackException(
+                    "File not found: {} ".format(val_indices_file))
+            
+            # make sure the train_indices_file file exists
+            if not os.path.isfile(train_indices_file):
+                raise NoTracebackException(
+                    "File not found: {} ".format(train_indices_file))
+                
+            # load val_indices
+            f = open(val_indices_file)
+            lines = f.readlines()
+            val_indices = [int(line.rstrip('\r').rstrip('\n')) for line in lines]
+            f.close()
+            
+            # load val_indices
+            f = open(train_indices_file)
+            lines = f.readlines()
+            train_indices = [int(line.rstrip('\r').rstrip('\n')) for line in lines]
+            f.close()
+        
+            logging.info("Train indices length: {}".format(len(train_indices)))
+            logging.info("Val indices length: {}".format(len(val_indices)))
             
         # Start training for the split in a separate process
         # This ensures that all resources are freed, when the 
@@ -773,11 +801,11 @@ def train_and_validate_ksplits(
             target=train_and_validate, 
             args=[input_data, model_arch_name, model_arch_params_json,
                   output_params, genome_params, batch_gen_params, hyper_params,
-                  parallelization_params, train_chroms, val_chroms, model_dir,
-                  bias_input_data, bias_model_arch_params_json, 
-                  adjust_bias_model_logcounts, is_background_model, 
-                  mnll_loss_sample_weight, mnll_loss_background_sample_weight,
-                  split_tag])
+                  parallelization_params, model_dir, train_chroms, val_chroms,
+                  train_indices, val_indices, bias_input_data, 
+                  bias_model_arch_params_json, adjust_bias_model_logcounts, 
+                  is_background_model, mnll_loss_sample_weight, 
+                  mnll_loss_background_sample_weight, split_tag])
         p.start()
         
         # wait for the process to finish
