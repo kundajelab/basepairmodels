@@ -175,9 +175,11 @@ def train_and_validate(
     input_data, model_arch_name, model_arch_params_json, output_params, 
     genome_params, batch_gen_params, hyper_params, parallelization_params, 
     model_dir, train_chroms=None, val_chroms=None, train_indices=None, 
-    val_indices=None, bias_input_data=None, bias_model_arch_params_json=None, 
-    adjust_bias_model_logcounts=False, is_background_model=False,
-    mnll_loss_sample_weight=1.0, mnll_loss_background_sample_weight=0.0, 
+    val_indices=None, background_train_indices=None, 
+    background_val_indices=None, bias_input_data=None,
+    bias_model_arch_params_json=None, adjust_bias_model_logcounts=False, 
+    is_background_model=False, mnll_loss_sample_weight=1.0, 
+    mnll_loss_background_sample_weight=0.0, 
     suffix_tag=None):
 
     """
@@ -211,13 +213,25 @@ def train_and_validate(
             
             parallelization_params (dict): dictionary containing
                 parameters for parallelization options
+
+            model_dir (str): the path to the output directory
             
             train_chroms (list): list of training chromosomes
             
             val_chroms (list): list of validation chromosomes
             
-            model_dir (str): the path to the output directory
+            train_indices (list): list of indices that index to 
+                training peaks from the signal peaks file
+                
+            val_indices (list): list of indices that index to 
+                validation peaks from the singal peaks file
             
+            background_train_indices (list): list of indices that index to 
+                training peaks from the background peaks file
+                
+            background_val_indices (list): list of indices that index to 
+                validation peaks from the background peaks file
+
             bias_input_data (str): path to the bias tasks json file
 
             bias_model_arch_params_json (str): path to json file 
@@ -347,7 +361,8 @@ def train_and_validate(
     train_gen = BatchGenerator(input_data, train_batch_gen_params, 
                                genome_params['reference_genome'], 
                                genome_params['chrom_sizes'],
-                               train_chroms, train_indices,
+                               chroms=train_chroms, loci_indices=train_indices, 
+                               background_loci_indices=background_train_indices,
                                num_threads=parallelization_params['threads'], 
                                batch_size=hyper_params['batch_size'], 
                                background_only=is_background_model,
@@ -359,7 +374,8 @@ def train_and_validate(
     val_gen = BatchGenerator(input_data, val_batch_gen_params, 
                              genome_params['reference_genome'], 
                              genome_params['chrom_sizes'],
-                             val_chroms, val_indices,
+                             chroms=val_chroms, loci_indices=val_indices,
+                             background_loci_indices=background_val_indices,
                              num_threads=parallelization_params['threads'], 
                              batch_size=hyper_params['batch_size'], 
                              background_only=is_background_model,
@@ -744,6 +760,8 @@ def train_and_validate_ksplits(
         val_chroms = None
         train_indices = None
         val_indices = None
+        background_train_indices=None
+        background_val_indices=None
         if 'val' in splits[str(i)]:
             val_chroms = splits[str(i)]['val']
             if 'train' in splits[str(i)]:
@@ -775,7 +793,7 @@ def train_and_validate_ksplits(
             if not os.path.isfile(train_indices_file):
                 raise NoTracebackException(
                     "File not found: {} ".format(train_indices_file))
-                
+
             # load val_indices
             f = open(val_indices_file)
             lines = f.readlines()
@@ -790,7 +808,40 @@ def train_and_validate_ksplits(
         
             logging.info("Train indices length: {}".format(len(train_indices)))
             logging.info("Val indices length: {}".format(len(val_indices)))
+
+            if 'background_val_indices_file' in splits[str(i)]:
+                background_val_indices_file = splits[str(i)]['background_val_indices_file']
+                background_train_indices_file = splits[str(i)]['background_train_indices_file']
+
+                # make sure the background_val_indices_file file exists
+                if not os.path.isfile(background_val_indices_file):
+                    raise NoTracebackException(
+                        "File not found: {} ".format(background_val_indices_file))
+
+                # make sure the background_train_indices_file file exists
+                if not os.path.isfile(background_train_indices_file):
+                    raise NoTracebackException(
+                        "File not found: {} ".format(background_train_indices_file))    
             
+                # load background_val_indices
+                f = open(background_val_indices_file)
+                lines = f.readlines()
+                background_val_indices = [int(line.rstrip('\r').rstrip('\n'))
+                                          for line in lines]
+                f.close()
+
+                # load background_train_indices
+                f = open(background_train_indices_file)
+                lines = f.readlines()
+                background_train_indices = [int(line.rstrip('\r').rstrip('\n'))
+                                            for line in lines]
+                f.close()
+
+                logging.info("Background Train indices length: {}".format(
+                    len(background_train_indices)))
+                logging.info("Background Val indices length: {}".format(
+                    len(background_val_indices)))
+
         # Start training for the split in a separate process
         # This ensures that all resources are freed, when the 
         # process terminates, & available for training the next split
@@ -801,11 +852,13 @@ def train_and_validate_ksplits(
             target=train_and_validate, 
             args=[input_data, model_arch_name, model_arch_params_json,
                   output_params, genome_params, batch_gen_params, hyper_params,
-                  parallelization_params, model_dir, train_chroms, val_chroms,
-                  train_indices, val_indices, bias_input_data, 
-                  bias_model_arch_params_json, adjust_bias_model_logcounts, 
-                  is_background_model, mnll_loss_sample_weight, 
-                  mnll_loss_background_sample_weight, split_tag])
+                  parallelization_params, model_dir,
+                  train_chroms, val_chroms, train_indices, val_indices, 
+                  background_train_indices, background_val_indices,
+                  bias_input_data, bias_model_arch_params_json,
+                  adjust_bias_model_logcounts, is_background_model, 
+                  mnll_loss_sample_weight, mnll_loss_background_sample_weight, 
+                  split_tag])
         p.start()
         
         # wait for the process to finish
