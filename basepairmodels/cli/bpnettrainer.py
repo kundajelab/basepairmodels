@@ -1,11 +1,11 @@
 """
-    Python script for network training via the CLI
+    Python script for training models via the CLI
 
     License:
     
     MIT License
 
-    Copyright (c) 2020 Kundaje Lab
+    Copyright (c) 2022 Kundaje Lab
 
     Permission is hereby granted, free of charge, to any person 
     obtaining a copy of this software and associated documentation

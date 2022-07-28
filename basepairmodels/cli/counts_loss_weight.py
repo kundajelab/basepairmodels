@@ -1,11 +1,11 @@
 """
-    Python script to compute the counts loss weight
+    Python script for auto computing counts loss weight
 
     License:
     
     MIT License
 
-    Copyright (c) 2021 Kundaje Lab
+    Copyright (c) 2022 Kundaje Lab
 
     Permission is hereby granted, free of charge, to any person 
     obtaining a copy of this software and associated documentation
@@ -28,6 +28,7 @@
     SOFTWARE.
 
 """
+
 from basepairmodels.cli.argparsers import counts_loss_weight_argsparser
 from basepairmodels.cli.exceptionhandler import NoTracebackException
 from basepairmodels.common import stats

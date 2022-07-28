@@ -20,7 +20,7 @@
     
     MIT License
 
-    Copyright (c) 2020 Kundaje Lab
+    Copyright (c) 2022 Kundaje Lab
 
     Permission is hereby granted, free of charge, to any person 
     obtaining a copy of this software and associated documentation
