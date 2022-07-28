@@ -43,7 +43,12 @@ def training_argsparser():
                         "be used in training (the name that will be used "
                         "to fetch the model from model_archs)",
                         default='BPNet')
-
+    
+    parser.add_argument('--bpnet-model-mode', type=str,
+                        choices=['single-multinomial', 'standard'],
+                        help="choice of single multinomial or standard",
+                        default='single-multinomial')
+    
     parser.add_argument('--sequence-generator-name', type=str,
                         help="the name of the sequence generator from "
                         "mseqgen library that will be used to generate "
